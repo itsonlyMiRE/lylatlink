@@ -9,11 +9,11 @@ locals {
   ecr_registry        = split("/", aws_ecr_repository.signaling.repository_url)[0]
   aws_cli_profile_arg = var.aws_profile != null && var.aws_profile != "" ? "--profile ${var.aws_profile}" : ""
   signaling_image_hash = sha256(join("", [
-    filesha256("${path.module}/../Dockerfile.signaling"),
+    filesha256("${path.module}/docker/Dockerfile.signaling"),
     filesha256("${path.module}/../package.json"),
     sha256(join("", [for f in fileset("${path.module}/../server", "**") : filesha256("${path.module}/../server/${f}")]))
   ]))
-  turn_image_hash = filesha256("${path.module}/../Dockerfile.turn")
+  turn_image_hash = filesha256("${path.module}/docker/Dockerfile.turn")
 
   manual_public_host = var.public_hostname != "" ? var.public_hostname : aws_eip.ecs.public_ip
   manual_signal_host = var.signaling_hostname != "" ? var.signaling_hostname : local.manual_public_host

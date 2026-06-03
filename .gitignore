@@ -5,6 +5,8 @@ build/
 /LylatLink.app/
 /lylatlink
 /lylatlink.exe
+/up
+/down
 *.exe
 *.dll
 *.zip

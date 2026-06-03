@@ -30,7 +30,7 @@ resource "null_resource" "build_signaling_image" {
       set -euo pipefail
       export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
       aws ${local.aws_cli_profile_arg} ecr get-login-password --region ${var.aws_region} | podman login --username AWS --password-stdin ${local.ecr_registry}
-      podman build --platform linux/amd64 -f ../Dockerfile.signaling -t ${aws_ecr_repository.signaling.repository_url}:${var.image_tag} ..
+      podman build --platform linux/amd64 -f docker/Dockerfile.signaling -t ${aws_ecr_repository.signaling.repository_url}:${var.image_tag} ..
       podman push ${aws_ecr_repository.signaling.repository_url}:${var.image_tag}
     EOT
     interpreter = ["/bin/bash", "-c"]
@@ -51,7 +51,7 @@ resource "null_resource" "build_turn_image" {
       set -euo pipefail
       export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
       aws ${local.aws_cli_profile_arg} ecr get-login-password --region ${var.aws_region} | podman login --username AWS --password-stdin ${local.ecr_registry}
-      podman build --platform linux/amd64 -f ../Dockerfile.turn -t ${aws_ecr_repository.turn.repository_url}:${var.image_tag} ..
+      podman build --platform linux/amd64 -f docker/Dockerfile.turn -t ${aws_ecr_repository.turn.repository_url}:${var.image_tag} ..
       podman push ${aws_ecr_repository.turn.repository_url}:${var.image_tag}
     EOT
     interpreter = ["/bin/bash", "-c"]

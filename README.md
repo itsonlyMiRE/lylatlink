@@ -10,6 +10,13 @@ LylatLink is a small Slippi voice companion. It is designed to be extremely simp
 - No login
 - Only one required config piece: set .slp replay folder
 
+## Download
+
+Get the latest builds from [Releases](https://github.com/itsonlyMiRE/lylatlink/releases/latest).
+
+- [Windows](https://github.com/itsonlyMiRE/lylatlink/releases/latest/download/lylatlink-windows-amd64.zip)
+- [macOS](https://github.com/itsonlyMiRE/lylatlink/releases/latest/download/lylatlink-macos-arm64.zip)
+
 ## Setup
 
 1. Download the latest release for your platform.
@@ -53,4 +60,4 @@ You can edit these from the tray menu with **Edit Config File**. Changes apply t
 - **End Call** in the tray menu manually disconnects the current voice session.
 - No login is required.
 
-Developer notes live in [DEV.md](DEV.md).
+Developer notes live in [docs/DEV.md](docs/DEV.md).
