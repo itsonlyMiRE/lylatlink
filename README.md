@@ -55,9 +55,4 @@ You can edit these from the tray menu with **Edit Config File**. Changes apply t
 
 ## Notes
 
-- LylatLink runs from the system tray by default.
-- The call ends automatically when the match ends.
-- **End Call** in the tray menu manually disconnects the current voice session.
-- No login is required.
-
 Developer notes live in [docs/DEV.md](docs/DEV.md).
