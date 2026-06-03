@@ -30,7 +30,7 @@ func Default() Config {
 		EndCallHotkey: "f8",
 		AudioCodec:    "opus",
 		OutputGainDB:  -1.5,
-		NoiseGateDB:   -55,
+		NoiseGateDB:   -45,
 		SignalBaseURL: "http://lylatlink.signal.mire.systems:8787",
 	}
 }

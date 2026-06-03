@@ -4,7 +4,31 @@ on:
   push:
     branches:
       - main
+    paths:
+      - ".github/workflows/build.yml"
+      - "assets/**"
+      - "cmd/**"
+      - "go.mod"
+      - "go.sum"
+      - "internal/**"
+      - "package.json"
+      - "packaging/**"
+      - "scripts/build-macos.sh"
+      - "scripts/build-windows.ps1"
+      - "server/**"
   pull_request:
+    paths:
+      - ".github/workflows/build.yml"
+      - "assets/**"
+      - "cmd/**"
+      - "go.mod"
+      - "go.sum"
+      - "internal/**"
+      - "package.json"
+      - "packaging/**"
+      - "scripts/build-macos.sh"
+      - "scripts/build-windows.ps1"
+      - "server/**"
   workflow_dispatch:
 
 jobs:

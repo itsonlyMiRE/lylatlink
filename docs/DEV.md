@@ -16,18 +16,29 @@ Implemented:
 - Once paired, it opens a Pion WebRTC peer connection over `/signal`.
 - It proves WebRTC connectivity with a data channel and audio RTP.
 - It logs remote audio stats: packets/sec, RTP bitrate, payload bitrate, sequence gaps, RMS, and peak dBFS.
-- It lists input devices, captures a selected/default microphone in standalone diagnostics mode, and logs RMS/peak dBFS.
+- It lists input and output devices, captures a selected/default microphone in standalone diagnostics mode, and logs RMS/peak dBFS.
 - It sends live microphone frames through WebRTC as Opus by default, with PCMU as a fallback/test codec.
-- It decodes incoming Opus/PCMU audio and plays it through the system default speaker.
-- It has a system tray mode with status, match label, auto-join toggle, end call, input/output device choosers, replay folder picker, config-file opener, codec/playback display, and quit.
+- It applies configurable input gain, output gain, and microphone noise gate threshold during voice sessions.
+- It decodes incoming Opus/PCMU audio and plays it through the selected/default speaker or headphones.
+- It has a system tray mode with app icon, status, match label, auto-join toggle, end call, input/output device choosers, replay folder picker, config-file opener, codec/playback display, input/output/noise gate readouts, and quit.
 - The Node signaling server exposes `POST /match/start`, `POST /match/end`, and `WSS /signal`.
+- The signaling server issues coturn-compatible TURN credentials with an 8-minute default TTL, rate-limits each source IP, and prevents unrelated nonces from ending pending matches.
 - Terraform infra can run the signaling server and coturn on one EC2-backed ECS host.
+- Terraform infra builds/pushes local Podman images, keeps the latest three ECR images per repo, and can use either Route 53 or externally managed DNS.
+- GitHub Actions builds server tests, Go tests, unsigned macOS app artifacts, and Windows portable artifacts when app/server/build inputs change.
+- Local packaging scripts build an unsigned macOS `.app` bundle and Windows portable binaries with embedded app icons.
 
-Not implemented yet:
+TODO:
 
 - Global end-call hotkey.
 - GitHub Release publishing.
 - Voice connected chime sound.
+- UI controls for audio tuning - input/output gain levels, noise gate threshold
+- In-game overlay: show connection status (red Disconnected / green Connected, plus player codes), input/output/noise gate levels, togglable with configurable scale/position/transparency
+- Launch-with-Slippi helper shortcut
+- Auto-detect .slp folder from Slippi Launcher config
+- 4 player support
+- Intel Mac + Linux
 
 ## Run The Signaling Server
 
@@ -61,7 +72,7 @@ output_device_id = "" # optional; empty means system default speaker/headphones
 audio_codec = "opus" # opus or pcmu
 input_gain_db = 0.0
 output_gain_db = -1.5
-noise_gate_threshold_db = -55.0
+noise_gate_threshold_db = -45.0
 end_call_hotkey = "f8"
 ```
 
@@ -208,7 +219,9 @@ The signaling server currently rate-limits each source IP to 20 requests per min
 
 `infra/` contains Terraform for one EC2-backed ECS host running two services: the Node signaling server and coturn. It also creates ECR repos, CloudWatch logs, security groups, an Elastic IP, and an SSM SecureString for the TURN shared secret.
 
-Local Podman image builds are wired through Terraform `null_resource`s and push to ECR. Keep `infra/prod.tfvars`, state files, and environment files out of git.
+Local Podman image builds are wired through Terraform `null_resource`s and push to ECR. Dockerfiles live under `infra/docker/`. Each ECR repository has a lifecycle policy that keeps the latest three images and expires older images.
+
+Keep `infra/prod.tfvars`, state files, and environment files out of git.
 
 For a Cloudflare-managed domain, leave Route 53 variables empty and set `signaling_hostname` / `turn_hostname` in `infra/prod.tfvars`. Create matching Cloudflare `A` records manually, pointing at the Terraform `ecs_public_ip` output. These records must be DNS-only, not proxied:
 

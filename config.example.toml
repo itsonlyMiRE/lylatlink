@@ -5,5 +5,5 @@ output_device_id = ""
 audio_codec = "opus"
 input_gain_db = 0.0
 output_gain_db = -1.5
-noise_gate_threshold_db = -55.0
+noise_gate_threshold_db = -45.0
 end_call_hotkey = "f8"

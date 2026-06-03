@@ -92,7 +92,7 @@ func (r *Runner) ready(ctx context.Context) {
 	m.inputGain.Disable()
 	m.outputGain = systray.AddMenuItem("Output Gain: -1.5 dB", "Configured remote playback gain")
 	m.outputGain.Disable()
-	m.noiseGate = systray.AddMenuItem("Noise Gate: -55.0 dBFS", "Configured microphone noise gate threshold")
+	m.noiseGate = systray.AddMenuItem("Noise Gate: -45.0 dBFS", "Configured microphone noise gate threshold")
 	m.noiseGate.Disable()
 	m.playback = systray.AddMenuItem("Playback: on", "Remote speaker playback state")
 	m.playback.Disable()

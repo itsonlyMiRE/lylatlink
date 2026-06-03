@@ -469,7 +469,7 @@ func (p *micProcessor) process(frame []int16) []int16 {
 
 func normalizeNoiseGateDB(value float64) float64 {
 	if value == 0 {
-		return -55
+		return -45
 	}
 	return value
 }
