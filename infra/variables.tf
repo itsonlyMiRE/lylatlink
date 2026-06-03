@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "aws_profile" {
   type        = string
   description = "Local AWS CLI profile Terraform and null_resource builds should use."
-  default     = "personal"
+  default     = null
 }
 
 variable "project_name" {

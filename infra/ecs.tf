@@ -54,7 +54,8 @@ resource "aws_ecs_task_definition" "signaling" {
     environment = [
       { name = "PORT", value = tostring(var.signaling_port) },
       { name = "TURN_URLS", value = join(",", local.turn_urls) },
-      { name = "TURN_TTL_SECONDS", value = tostring(var.turn_ttl_seconds) }
+      { name = "TURN_TTL_SECONDS", value = tostring(var.turn_ttl_seconds) },
+      { name = "LYLATLINK_IMAGE_HASH", value = local.signaling_image_hash }
     ]
     secrets = [
       { name = "TURN_SECRET", valueFrom = aws_ssm_parameter.turn_secret.arn }
@@ -89,6 +90,9 @@ resource "aws_ecs_task_definition" "turn" {
     name      = "turn"
     image     = "${aws_ecr_repository.turn.repository_url}:${var.image_tag}"
     essential = true
+    environment = [
+      { name = "LYLATLINK_IMAGE_HASH", value = local.turn_image_hash }
+    ]
     command = [
       "sh",
       "-c",

@@ -10,6 +10,7 @@ Implemented:
 
 - Go client daemon parses minimal Slippi `Game Start` / `Game End` data.
 - It watches replay folders for live `.slp` files, including both flat `Slippi/*.slp` and grouped `Slippi/YYYY-MM/*.slp` layouts. Startup scans only recently modified replays so stale files do not briefly look live, and missing `Game End` is handled with file-stability fallback.
+- It can pair matches with either two unique connect codes or one deduped connect code, which allows self-match testing where both replay files expose the same Slippi connect code.
 - It submits match start/end events to the signaling server.
 - It uses an ephemeral per-launch `clientNonce` for duplicate suppression.
 - Once paired, it opens a Pion WebRTC peer connection over `/signal`.
@@ -25,7 +26,7 @@ Implemented:
 Not implemented yet:
 
 - Global end-call hotkey.
-- Bundled macOS `.app`, Windows installer, and automated release artifacts.
+- GitHub Release publishing.
 
 ## Run The Signaling Server
 
@@ -101,10 +102,24 @@ Opus uses the system `libopus` library through `pkg-config`. On macOS:
 brew install opus pkg-config
 ```
 
+Build an unsigned portable macOS app bundle:
+
+```bash
+scripts/build-macos.sh
+```
+
+The script writes `dist/macos/LylatLink.app` and `dist/lylatlink-macos-<arch>.zip`. The bundle includes `assets/icon.icns` and a copied `libopus.0.dylib`, so users do not need Homebrew for the packaged app. It also sets `LSUIElement=true` for menu-bar behavior and includes `NSMicrophoneUsageDescription` for macOS microphone permission prompts.
+
+This app is not Developer ID signed or notarized. First launch may require right-clicking the app and choosing Open, or clearing quarantine:
+
+```bash
+xattr -dr com.apple.quarantine LylatLink.app
+```
+
 On Windows builds, install Go and MSYS2, then install the mingw64 cgo/Opus dependencies:
 
 ```powershell
-C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-x86_64-gcc mingw-w64-x86_64-pkgconf mingw-w64-x86_64-opus"
+C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-pkgconf mingw-w64-x86_64-opus"
 ```
 
 Build Windows release binaries from PowerShell on a Windows machine:
@@ -115,7 +130,11 @@ Build Windows release binaries from PowerShell on a Windows machine:
 
 The script writes `dist\windows-amd64\lylatlink.exe` for default no-console tray use, `dist\windows-amd64\lylatlink-console.exe` for foreground diagnostics, and the needed Opus/mingw runtime DLLs beside the executables. The no-console app can also attach/open a console for diagnostic flags such as `-console`, `-list-audio-devices`, and `-audio-device-test`.
 
-GitHub Actions also builds a Windows artifact. Run the `Build` workflow from the Actions tab, then download `lylatlink-windows-amd64` from the workflow run artifacts.
+GitHub Actions also builds macOS and Windows artifacts. Run the `Build` workflow from the Actions tab, then download `lylatlink-macos` or `lylatlink-windows-amd64` from the workflow run artifacts.
+
+No Windows installer is planned for the normal release path. The app is intended to run as a portable tray executable, with settings stored in AppData rather than beside the executable. An installer would only be useful later for optional conveniences such as Start Menu shortcuts, auto-update wiring, or a bundled Slippi launcher shortcut.
+
+The Windows portable zip should contain `lylatlink.exe`, `lylatlink-console.exe`, and the required DLLs. User config persists separately under `%APPDATA%\lylatlink\config.toml`.
 
 To test WebRTC pairing locally, run the signaling server and two clients with `auto_join=true`, then copy the same replay into both watched directories. Successful output includes:
 
@@ -127,23 +146,6 @@ remote media track
 remote audio playback started
 audio stream stats
 ```
-
-There is also a local loopback harness:
-
-```bash
-scripts/local-loopback.sh /path/to/Game.slp
-```
-
-It starts a local signaling server, launches two clients against temp replay folders, copies the replay into both folders, and tails separate logs. By default both clients use `-ignore-match-end` so a finalized replay can create a voice tunnel without immediately tearing it down. Client A uses real mic with `-no-playback`; client B uses `-synthetic-audio` with playback enabled, so you should hear Client A's mic on Client B without feedback. Override with env vars:
-
-```bash
-CLIENT_A_FLAGS="" CLIENT_B_FLAGS="" scripts/local-loopback.sh /path/to/Game.slp
-IGNORE_MATCH_END=0 scripts/local-loopback.sh /path/to/Game.slp
-RUN_SECONDS=60 scripts/local-loopback.sh /path/to/Game.slp
-PORT=8790 scripts/local-loopback.sh /path/to/Game.slp
-```
-
-Set `IGNORE_MATCH_END=0` when you specifically want to test normal replay-end teardown.
 
 List input devices:
 

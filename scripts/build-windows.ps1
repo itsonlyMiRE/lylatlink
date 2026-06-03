@@ -87,11 +87,22 @@ $pkgConfigCandidates = @(
     (Join-Path $msysRoot "usr\bin\pkg-config.exe"),
     (Join-Path $msysRoot "usr\bin\pkgconf.exe")
 )
+$windresCandidates = @(
+    (Join-Path $mingwBin "windres.exe"),
+    (Join-Path $mingwBin "x86_64-w64-mingw32-windres.exe")
+)
 
 $pkgConfigExe = $null
 foreach ($candidate in $pkgConfigCandidates) {
     if (Test-Path $candidate) {
         $pkgConfigExe = $candidate
+        break
+    }
+}
+$windresExe = $null
+foreach ($candidate in $windresCandidates) {
+    if (Test-Path $candidate) {
+        $windresExe = $candidate
         break
     }
 }
@@ -101,6 +112,9 @@ if (-not (Test-Path $gccExe)) {
 }
 if (-not $pkgConfigExe) {
     throw "pkg-config/pkgconf was not found in $mingwBin or $msysRoot\usr\bin"
+}
+if (-not $windresExe) {
+    throw "windres was not found in $mingwBin"
 }
 
 $opusPc = Get-ChildItem -Path $msysRoot -Filter "opus.pc" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -131,6 +145,7 @@ Write-Host "MSYS2 env: $mingwDir"
 Write-Host "CC: $env:CC"
 Write-Host "PKG_CONFIG: $env:PKG_CONFIG"
 Write-Host "PKG_CONFIG_PATH: $env:PKG_CONFIG_PATH"
+Write-Host "WINDRES: $windresExe"
 
 & $pkgConfigExe --exists opus
 if ($LASTEXITCODE -ne 0) {
@@ -154,15 +169,34 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 $appExe = Join-Path $out "lylatlink.exe"
 $consoleExe = Join-Path $out "lylatlink-console.exe"
+$iconPath = Join-Path $RepoRoot "assets\icon.ico"
+$resourceRc = Join-Path ([System.IO.Path]::GetTempPath()) "lylatlink-icon.rc"
+$resourceSyso = Join-Path $RepoRoot "cmd\lylatlink\lylatlink.syso"
 
-& go build -trimpath -ldflags "-s -w" -o $consoleExe ./cmd/lylatlink
-if ($LASTEXITCODE -ne 0) {
-    throw "console build failed"
+if (-not (Test-Path $iconPath)) {
+    throw "Windows icon was not found at $iconPath"
 }
+$iconPathForRc = $iconPath.Replace("\", "/")
 
-& go build -trimpath -ldflags "-s -w -H=windowsgui" -o $appExe ./cmd/lylatlink
-if ($LASTEXITCODE -ne 0) {
-    throw "app build failed"
+try {
+    Set-Content -Path $resourceRc -Encoding ASCII -Value "1 ICON `"$iconPathForRc`""
+    & $windresExe -O coff -F pe-x86-64 -i $resourceRc -o $resourceSyso
+    if ($LASTEXITCODE -ne 0) {
+        throw "windres failed"
+    }
+
+    & go build -trimpath -ldflags "-s -w" -o $consoleExe ./cmd/lylatlink
+    if ($LASTEXITCODE -ne 0) {
+        throw "console build failed"
+    }
+
+    & go build -trimpath -ldflags "-s -w -H=windowsgui" -o $appExe ./cmd/lylatlink
+    if ($LASTEXITCODE -ne 0) {
+        throw "app build failed"
+    }
+}
+finally {
+    Remove-Item -Force -ErrorAction SilentlyContinue $resourceRc, $resourceSyso
 }
 
 foreach ($dll in @("libopus-0.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll")) {

@@ -9,6 +9,7 @@ const { createServer, normalizePlayerCodes } = require("./server");
 test("normalizes and validates player codes", () => {
   assert.deepEqual(normalizePlayerCodes(["tafo#001", "MANG#0"]), ["MANG#0", "TAFO#001"]);
   assert.deepEqual(normalizePlayerCodes(["bad", "TAFO#001"]), ["TAFO#001"]);
+  assert.deepEqual(normalizePlayerCodes(["TAFO#001", "TAFO#001"]), ["TAFO#001"]);
 });
 
 test("times out unmatched match starts", async () => {
@@ -26,6 +27,22 @@ test("pairs two distinct nonces for the same match", async () => {
   try {
     const first = postJSON(fixture.url, "/match/start", startPayload("nonce-a-00000001"));
     const second = postJSON(fixture.url, "/match/start", startPayload("nonce-b-00000002"));
+    const [a, b] = await Promise.all([first, second]);
+
+    assert.equal(a.status, "ready");
+    assert.equal(b.status, "ready");
+    assert.equal(a.roomToken, b.roomToken);
+    assert.notEqual(a.initiator, b.initiator);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("pairs two distinct nonces for a one-code self match", async () => {
+  const fixture = await startFixture({ ttlMs: 500 });
+  try {
+    const first = postJSON(fixture.url, "/match/start", startPayload("nonce-a-00000001", ["TAFO#001"]));
+    const second = postJSON(fixture.url, "/match/start", startPayload("nonce-b-00000002", ["TAFO#001"]));
     const [a, b] = await Promise.all([first, second]);
 
     assert.equal(a.status, "ready");
@@ -93,13 +110,13 @@ function restoreEnv(name, value) {
   }
 }
 
-function startPayload(clientNonce) {
+function startPayload(clientNonce, playerCodes = ["TAFO#001", "MANG#000"]) {
   return {
     matchId: "mode.unranked-2022-12-20T06:52:39.18-0:1:0",
     sessionId: "mode.unranked-2022-12-20T06:52:39.18-0",
     gameNumber: 1,
     tiebreakerNumber: 0,
-    playerCodes: ["TAFO#001", "MANG#000"],
+    playerCodes,
     clientNonce,
   };
 }

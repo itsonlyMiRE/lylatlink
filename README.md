@@ -1,6 +1,14 @@
-# LylatLink
+<h1>
+  <img src="assets/icon.png" width="36" height="36" alt="LylatLink logo" align="top">
+  LylatLink
+</h1>
 
-LylatLink is a small Slippi voice companion. Leave it running in the tray, play Slippi, and it automatically opens a voice call when both players in a match are using LylatLink.
+LylatLink is a small Slippi voice companion. It is designed to be extremely simple to use - leave it running in the tray, play Slippi, and it automatically opens a voice call when both players in a match are using LylatLink.
+
+- Tiny executable size
+- Simple UI
+- No login
+- Only one required config piece: set .slp replay folder
 
 ## Setup
 
@@ -8,6 +16,10 @@ LylatLink is a small Slippi voice companion. Leave it running in the tray, play 
 2. Run LylatLink.
 3. Open the tray menu and choose **Replay Folder**.
 4. Select the replay folder configured in Slippi Launcher.
+
+If needed, you can find the folder location in Slippi Launcher under Replay settings:
+
+![Slippi Launcher replay folder setting](docs/images/slippi-replay-folder.png)
 
 That is the only required setup.
 

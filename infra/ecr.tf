@@ -20,9 +20,8 @@ resource "null_resource" "build_signaling_image" {
   count = var.build_images ? 1 : 0
 
   triggers = {
-    image_tag       = var.image_tag
-    dockerfile_hash = filesha256("${path.module}/../Dockerfile.signaling")
-    server_hash     = sha256(join("", [for f in fileset("${path.module}/../server", "**") : filesha256("${path.module}/../server/${f}")]))
+    image_tag  = var.image_tag
+    image_hash = local.signaling_image_hash
   }
 
   provisioner "local-exec" {
@@ -42,8 +41,8 @@ resource "null_resource" "build_turn_image" {
   count = var.build_images ? 1 : 0
 
   triggers = {
-    image_tag       = var.image_tag
-    dockerfile_hash = filesha256("${path.module}/../Dockerfile.turn")
+    image_tag  = var.image_tag
+    image_hash = local.turn_image_hash
   }
 
   provisioner "local-exec" {

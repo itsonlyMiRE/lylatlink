@@ -153,7 +153,7 @@ func (w *Watcher) inspect(ctx context.Context, path string, states map[string]*f
 		}
 		return
 	}
-	if match.MatchID == "" || len(match.PlayerCodes) != 2 {
+	if match.MatchID == "" || !hasPairablePlayerCodes(match.PlayerCodes) {
 		return
 	}
 
@@ -178,6 +178,10 @@ func (w *Watcher) inspect(ctx context.Context, path string, states map[string]*f
 	}
 
 	w.detectStableEnd(ctx, path, state, match, out)
+}
+
+func hasPairablePlayerCodes(codes []string) bool {
+	return len(codes) >= 1 && len(codes) <= 2
 }
 
 func (w *Watcher) detectStableEnd(ctx context.Context, path string, state *fileState, match *slp.Match, out chan<- MatchEvent) {

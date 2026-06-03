@@ -305,7 +305,7 @@ function validateStart(body) {
     return { error: "invalid_client_nonce" };
   }
   const playerCodes = normalizePlayerCodes(body.playerCodes);
-  if (playerCodes.length !== 2) {
+  if (playerCodes.length < 1 || playerCodes.length > 2) {
     return { error: "invalid_player_codes" };
   }
   return {

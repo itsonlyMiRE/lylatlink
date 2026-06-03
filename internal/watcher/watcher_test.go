@@ -87,6 +87,26 @@ func TestRunEmitsStartForExistingReplayInMonthFolder(t *testing.T) {
 	}
 }
 
+func TestInspectEmitsStartForOneCodeSelfMatch(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "Game.slp")
+	if err := os.WriteFile(path, syntheticSelfMatchSLPWithoutGameEnd(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	w := &Watcher{StableThreshold: time.Hour}
+	states := map[string]*fileState{}
+	events := make(chan MatchEvent, 4)
+
+	w.inspect(context.Background(), path, states, events)
+	event := nextEvent(t, events)
+	if event.Type != EventMatchStart {
+		t.Fatalf("event = %s, want %s", event.Type, EventMatchStart)
+	}
+	if len(event.Match.PlayerCodes) != 1 || event.Match.PlayerCodes[0] != "TAFO#001" {
+		t.Fatalf("player codes = %#v, want one deduped code", event.Match.PlayerCodes)
+	}
+}
+
 func TestRunSkipsStaleReplayOnStartup(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "Game.slp")
@@ -138,13 +158,20 @@ func nextEvent(t *testing.T, events <-chan MatchEvent) MatchEvent {
 }
 
 func syntheticSLPWithoutGameEnd() []byte {
-	raw := syntheticRawWithoutGameEnd()
+	raw := syntheticRawWithoutGameEnd("MANG", "000")
 	header := []byte{'{', 'U', 0x03, 'r', 'a', 'w', '[', '$', 'U', '#', 'l', 0, 0, 0, 0}
 	binary.BigEndian.PutUint32(header[len(header)-4:], uint32(len(raw)))
 	return append(header, raw...)
 }
 
-func syntheticRawWithoutGameEnd() []byte {
+func syntheticSelfMatchSLPWithoutGameEnd() []byte {
+	raw := syntheticRawWithoutGameEnd("TAFO", "001")
+	header := []byte{'{', 'U', 0x03, 'r', 'a', 'w', '[', '$', 'U', '#', 'l', 0, 0, 0, 0}
+	binary.BigEndian.PutUint32(header[len(header)-4:], uint32(len(raw)))
+	return append(header, raw...)
+}
+
+func syntheticRawWithoutGameEnd(secondCodeName, secondCodeDigits string) []byte {
 	const (
 		eventPayloads = 0x35
 		gameStart     = 0x36
@@ -178,7 +205,7 @@ func syntheticRawWithoutGameEnd() []byte {
 	writeTestASCII(start, displayNameOffset, displayNameLen, "Tafo")
 	writeTestASCII(start, displayNameOffset+displayNameStride, displayNameLen, "Mang")
 	writeTestConnectCode(start, connectCodeOffset, "TAFO", "001")
-	writeTestConnectCode(start, connectCodeOffset+connectCodeStride, "MANG", "000")
+	writeTestConnectCode(start, connectCodeOffset+connectCodeStride, secondCodeName, secondCodeDigits)
 	writeTestASCII(start, sessionIDOffset, sessionIDLen, "mode.unranked-2022-12-20T06:52:39.18-0")
 	binary.BigEndian.PutUint32(start[gameNumberOffset:gameNumberOffset+4], 1)
 

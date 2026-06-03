@@ -494,6 +494,9 @@ func matchLabel(match slp.Match) string {
 	if len(match.PlayerCodes) == 2 {
 		return fmt.Sprintf("%s vs %s", match.PlayerCodes[0], match.PlayerCodes[1])
 	}
+	if len(match.PlayerCodes) == 1 {
+		return fmt.Sprintf("%s self-match", match.PlayerCodes[0])
+	}
 	return match.MatchID
 }
 

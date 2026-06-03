@@ -13,6 +13,7 @@ import (
 	"github.com/getlantern/systray"
 	"github.com/sqweek/dialog"
 
+	"lylatlink/assets"
 	"lylatlink/internal/app"
 	"lylatlink/internal/audio"
 )
@@ -58,7 +59,7 @@ func Run(ctx context.Context, controller *app.Controller) {
 }
 
 func (r *Runner) ready(ctx context.Context) {
-	systray.SetTitle("LL")
+	setTrayIcon()
 	systray.SetTooltip("LylatLink")
 
 	m := &menu{
@@ -115,6 +116,17 @@ func (r *Runner) ready(ctx context.Context) {
 		<-ctx.Done()
 		systray.Quit()
 	}()
+}
+
+func setTrayIcon() {
+	switch runtime.GOOS {
+	case "darwin":
+		systray.SetTemplateIcon(assets.MacOSTrayTemplate32PNG, assets.IconPNG)
+	case "windows":
+		systray.SetIcon(assets.IconICO)
+	default:
+		systray.SetIcon(assets.IconPNG)
+	}
 }
 
 func (m *menu) listenStatus(ctx context.Context) {
