@@ -77,18 +77,50 @@ If MSYS2 is installed somewhere else, set MSYS2_ROOT before running this script.
 Add-PathPrefix (Join-Path $msysRoot "$mingwDir\bin")
 Add-PathPrefix (Join-Path $msysRoot "usr\bin")
 
+$mingwBin = Join-Path $msysRoot "$mingwDir\bin"
+$gccExe = Join-Path $mingwBin "gcc.exe"
+$pkgConfigExe = Join-Path $mingwBin "pkg-config.exe"
+if (-not (Test-Path $pkgConfigExe)) {
+    $pkgConfigExe = Join-Path $mingwBin "pkgconf.exe"
+}
+
+if (-not (Test-Path $gccExe)) {
+    throw "gcc was not found at $gccExe"
+}
+if (-not (Test-Path $pkgConfigExe)) {
+    throw "pkg-config/pkgconf was not found in $mingwBin"
+}
+
+$opusPc = Get-ChildItem -Path $msysRoot -Filter "opus.pc" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $opusPc) {
+    throw @"
+opus.pc was not found under $msysRoot.
+
+Install it with:
+  C:\msys64\usr\bin\bash.exe -lc "pacman -S --needed --noconfirm mingw-w64-x86_64-opus"
+"@
+}
+
 $env:CGO_ENABLED = "1"
 $env:GOOS = "windows"
 $env:GOARCH = "amd64"
-$env:PKG_CONFIG_PATH = Join-Path $msysRoot "$mingwDir\lib\pkgconfig"
+$env:CC = $gccExe
+$env:PKG_CONFIG = $pkgConfigExe
+$env:PKG_CONFIG_PATH = Split-Path -Parent $opusPc.FullName
 
-foreach ($tool in @("go", "gcc", "pkg-config")) {
+foreach ($tool in @("go")) {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
         throw "$tool was not found on PATH"
     }
 }
 
-& pkg-config --exists opus
+Write-Host "MSYS2 root: $msysRoot"
+Write-Host "MSYS2 env: $mingwDir"
+Write-Host "CC: $env:CC"
+Write-Host "PKG_CONFIG: $env:PKG_CONFIG"
+Write-Host "PKG_CONFIG_PATH: $env:PKG_CONFIG_PATH"
+
+& $pkgConfigExe --exists opus
 if ($LASTEXITCODE -ne 0) {
     throw @"
 pkg-config cannot find opus.
@@ -111,7 +143,6 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $appExe = Join-Path $out "lylatlink.exe"
 $consoleExe = Join-Path $out "lylatlink-console.exe"
 $launcher = Join-Path $out "Start-LylatLink-Tray.cmd"
-$mingwBin = Join-Path $msysRoot "$mingwDir\bin"
 
 & go build -trimpath -ldflags "-s -w" -o $consoleExe ./cmd/lylatlink
 if ($LASTEXITCODE -ne 0) {
