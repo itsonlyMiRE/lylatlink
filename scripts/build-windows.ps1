@@ -18,16 +18,47 @@ function Add-PathPrefix {
     }
 }
 
+function Get-MsysRootFromTool {
+    param([string]$Tool)
+
+    $cmd = Get-Command $Tool -ErrorAction SilentlyContinue
+    if (-not $cmd) {
+        return $null
+    }
+
+    $bin = Split-Path -Parent $cmd.Source
+    $parent = Split-Path -Parent $bin
+    if ((Split-Path -Leaf $bin) -eq "bin" -and (Split-Path -Leaf $parent) -in @("mingw64", "ucrt64", "clang64")) {
+        return Split-Path -Parent $parent
+    }
+    return $null
+}
+
 $msysCandidates = @()
 if ($env:MSYS2_ROOT) {
     $msysCandidates += $env:MSYS2_ROOT
 }
+$pathRoot = Get-MsysRootFromTool "gcc"
+if ($pathRoot) {
+    $msysCandidates += $pathRoot
+}
+$pathRoot = Get-MsysRootFromTool "pkg-config"
+if ($pathRoot) {
+    $msysCandidates += $pathRoot
+}
 $msysCandidates += @("C:\msys64", "C:\tools\msys64")
 
 $msysRoot = $null
+$mingwDir = $null
 foreach ($candidate in $msysCandidates) {
-    if ($candidate -and (Test-Path (Join-Path $candidate "mingw64\bin\gcc.exe"))) {
-        $msysRoot = $candidate
+    foreach ($subdir in @("mingw64", "ucrt64", "clang64")) {
+        if ($candidate -and (Test-Path (Join-Path $candidate "$subdir\bin\gcc.exe"))) {
+            $msysRoot = $candidate
+            $mingwDir = $subdir
+            break
+        }
+    }
+    if ($msysRoot) {
         break
     }
 }
@@ -43,13 +74,13 @@ If MSYS2 is installed somewhere else, set MSYS2_ROOT before running this script.
 "@
 }
 
-Add-PathPrefix (Join-Path $msysRoot "mingw64\bin")
+Add-PathPrefix (Join-Path $msysRoot "$mingwDir\bin")
 Add-PathPrefix (Join-Path $msysRoot "usr\bin")
 
 $env:CGO_ENABLED = "1"
 $env:GOOS = "windows"
 $env:GOARCH = "amd64"
-$env:PKG_CONFIG_PATH = Join-Path $msysRoot "mingw64\lib\pkgconfig"
+$env:PKG_CONFIG_PATH = Join-Path $msysRoot "$mingwDir\lib\pkgconfig"
 
 foreach ($tool in @("go", "gcc", "pkg-config")) {
     if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
@@ -80,7 +111,7 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 $appExe = Join-Path $out "lylatlink.exe"
 $consoleExe = Join-Path $out "lylatlink-console.exe"
 $launcher = Join-Path $out "Start-LylatLink-Tray.cmd"
-$mingwBin = Join-Path $msysRoot "mingw64\bin"
+$mingwBin = Join-Path $msysRoot "$mingwDir\bin"
 
 & go build -trimpath -ldflags "-s -w" -o $consoleExe ./cmd/lylatlink
 if ($LASTEXITCODE -ne 0) {
