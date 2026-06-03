@@ -8,9 +8,9 @@ LylatLink is a small companion app for Slippi that adds voice chat with opponent
 Core details:
 - **Tiny executable size** - built fully in Go; no Electron nonsense
 - **Fully open source**
+- **ZERO setup required** - just run the app and verify the auto-detected .slp folder is where your new .slp files get created
 - **Simple UI** - little menu in your system tray + an info and status overlay in-game [overlay WIP] 
-- **No login**, just parses .slp files and matches players accordingly
-- Only one required config piece: set .slp replay folder
+- **No login**, just parses new .slp files and matches players accordingly
 - **End Call** menu button and hotkey: quickly terminate calls with toxic players [hotkey WIP]
 - **Player IP protection** - audio is P2P but routed through a relay server
 - Absolutely **zero server-side capture or analysis of audio**, nothing is stored, the server is purely a relay to protect player IPs
@@ -27,14 +27,13 @@ Core details:
 
 1. Download the latest release for your platform above.
 2. Run LylatLink.
-3. Open the tray menu and choose **Replay Folder**.
-4. Select the folder that stores your .slp replays. ***Note:** If you organize replays into monthly subfolders, choose the parent Slippi folder; i.e., if they save to [path]/Slippi/2026-06, select the 'Slippi' folder.*
+3. Play!
 
-If needed, you can find the folder location in Slippi Launcher under Replay settings:
+LylatLink will try to find your Slippi replay folder automatically using your Slippi Launcher and Dolphin settings. If it does not, open the tray menu, choose **Replay Folder**, and select the folder that stores your .slp replays. ***Note:** If you organize replays into monthly subfolders, choose the parent Slippi folder; i.e., if they save to [path]/Slippi/2026-06, select the 'Slippi' folder.*
+
+If this is not working for whatever reason, you can find the folder location in Slippi Launcher under Replay settings:
 
 ![Slippi Launcher replay folder setting](docs/images/slippi-replay-folder.png)
-
-That is the only required setup.
 
 ## Audio
 
