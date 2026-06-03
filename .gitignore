@@ -15,6 +15,7 @@ build/
 cmd/lylatlink/*.syso
 config.toml
 lylatlink-plan.md
+release-notes.md
 coverage/
 .env
 .env.*

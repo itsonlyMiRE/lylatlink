@@ -27,6 +27,7 @@ Not implemented yet:
 
 - Global end-call hotkey.
 - GitHub Release publishing.
+- Voice connected chime sound.
 
 ## Run The Signaling Server
 

@@ -3,7 +3,7 @@
   LylatLink
 </h1>
 
-LylatLink is a small Slippi voice companion. It is designed to be extremely simple to use - leave it running in the tray, play Slippi, and it automatically opens a voice call when both players in a match are using LylatLink.
+LylatLink is a small companion app for Slippi that adds voice chat. It is designed to be extremely simple to use - leave it running in the system tray, play Slippi, and it automatically opens a voice call when both players in a match are using LylatLink. 
 
 - Tiny executable size
 - Simple UI
