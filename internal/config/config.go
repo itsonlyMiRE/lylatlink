@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/adrg/xdg"
@@ -56,9 +57,10 @@ func LoadOrCreate(path string) (Config, error) {
 		}
 		return cfg, nil
 	}
-	if _, err := toml.DecodeFile(path, &cfg); err != nil {
+	if err := decodeConfigFile(path, &cfg); err != nil {
 		return Config{}, err
 	}
+	cfg.ReplayDir = normalizePathForConfig(cfg.ReplayDir)
 	if cfg.SignalBaseURL == "" {
 		cfg.SignalBaseURL = Default().SignalBaseURL
 	}
@@ -72,6 +74,7 @@ func LoadOrCreate(path string) (Config, error) {
 }
 
 func Save(path string, cfg Config) error {
+	cfg.ReplayDir = normalizePathForConfig(cfg.ReplayDir)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -81,4 +84,54 @@ func Save(path string, cfg Config) error {
 	}
 	defer f.Close()
 	return toml.NewEncoder(f).Encode(cfg)
+}
+
+func decodeConfigFile(path string, cfg *Config) error {
+	if _, err := toml.DecodeFile(path, cfg); err == nil {
+		return nil
+	}
+
+	data, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return readErr
+	}
+	repaired, ok := repairUnescapedWindowsReplayDir(string(data))
+	if !ok {
+		_, err := toml.Decode(string(data), cfg)
+		return err
+	}
+	_, err := toml.Decode(repaired, cfg)
+	return err
+}
+
+func repairUnescapedWindowsReplayDir(data string) (string, bool) {
+	lines := strings.SplitAfter(data, "\n")
+	changed := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "replay_dir") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		firstQuote := strings.Index(value, "\"")
+		lastQuote := strings.LastIndex(value, "\"")
+		if firstQuote < 0 || lastQuote <= firstQuote {
+			continue
+		}
+		raw := value[firstQuote+1 : lastQuote]
+		if !strings.Contains(raw, `\`) {
+			continue
+		}
+		value = value[:firstQuote+1] + normalizePathForConfig(raw) + value[lastQuote:]
+		lines[i] = key + "=" + value
+		changed = true
+	}
+	return strings.Join(lines, ""), changed
+}
+
+func normalizePathForConfig(path string) string {
+	return strings.ReplaceAll(path, `\`, `/`)
 }
