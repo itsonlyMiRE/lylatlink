@@ -30,7 +30,7 @@ type NoopController struct{}
 
 func (NoopController) Start(_ context.Context, _ string, room signaling.StartResponse) error {
 	if room.Status == "ready" {
-		log.Printf("voice room ready: token=%s initiator=%v", room.RoomToken, room.Initiator)
+		log.Printf("voice room ready: token=%s initiator=%v", redactToken(room.RoomToken), room.Initiator)
 	}
 	return nil
 }
@@ -99,6 +99,13 @@ func normalizeAudioCodec(codec string) string {
 	}
 }
 
+func redactToken(token string) string {
+	if len(token) <= 8 {
+		return "<redacted>"
+	}
+	return token[:4] + "..." + token[len(token)-4:]
+}
+
 func (c *WebRTCController) Start(ctx context.Context, matchID string, room signaling.StartResponse) error {
 	if room.Status != "ready" {
 		return nil
@@ -112,7 +119,7 @@ func (c *WebRTCController) Start(ctx context.Context, matchID string, room signa
 		return err
 	}
 
-	log.Printf("voice room ready: token=%s initiator=%v", room.RoomToken, room.Initiator)
+	log.Printf("voice room ready: token=%s initiator=%v", redactToken(room.RoomToken), room.Initiator)
 	log.Printf("webrtc data-channel connecting: %s", matchID)
 
 	dialer := websocket.Dialer{HandshakeTimeout: 10 * time.Second}

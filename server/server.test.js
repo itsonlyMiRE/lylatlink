@@ -102,6 +102,40 @@ test("dedupes duplicate nonce submissions", async () => {
   }
 });
 
+test("does not let unrelated nonce end a pending match", async () => {
+  const fixture = await startFixture({ ttlMs: 50 });
+  try {
+    const first = postJSON(fixture.url, "/match/start", startPayload("nonce-a-00000001"));
+    const end = await postJSON(fixture.url, "/match/end", {
+      matchId: "mode.unranked-2022-12-20T06:52:39.18-0:1:0",
+      clientNonce: "nonce-z-00000026",
+    });
+    assert.equal(end.ok, true);
+
+    const timedOut = await first;
+    assert.equal(timedOut.status, "waiting");
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("lets submitting nonce end a pending match", async () => {
+  const fixture = await startFixture({ ttlMs: 500 });
+  try {
+    const first = postJSON(fixture.url, "/match/start", startPayload("nonce-a-00000001"));
+    const end = await postJSON(fixture.url, "/match/end", {
+      matchId: "mode.unranked-2022-12-20T06:52:39.18-0:1:0",
+      clientNonce: "nonce-a-00000001",
+    });
+    assert.equal(end.ok, true);
+
+    const ended = await first;
+    assert.equal(ended.status, "ended");
+  } finally {
+    await fixture.close();
+  }
+});
+
 function restoreEnv(name, value) {
   if (value === undefined) {
     delete process.env[name];

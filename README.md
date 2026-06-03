@@ -3,39 +3,38 @@
   LylatLink
 </h1>
 
-LylatLink is a small companion app for Slippi that adds voice chat. It is designed to be extremely simple to use - leave it running in the system tray, play Slippi, and it automatically opens a voice call when both players in a match are using LylatLink. 
+LylatLink is a small companion app for Slippi that adds voice chat with opponents. It is designed to be extremely simple to use - leave it running in the system tray, play Slippi, and it automatically opens a voice call when both players in a match are using LylatLink. 
 
-- Tiny executable size
-- Simple UI
-- No login
+Core details:
+- **Tiny executable size** - built fully in Go; no Electron nonsense
+- **Fully open source**
+- **Simple UI** - little menu in your system tray + an info and status overlay in-game [overlay WIP] 
+- **No login**, just parses .slp files and matches players accordingly
 - Only one required config piece: set .slp replay folder
+- **End Call** menu button and hotkey: quickly terminate calls with toxic players [hotkey WIP]
+- **Player IP protection** - audio is P2P but routed through a relay server
+- Absolutely **zero server-side capture or analysis of audio**, nothing is stored, the server is purely a relay to protect player IPs
+- Cost is out of my pocket but cheap :,)
+- Matches with >2 players not currently supported, but can be if there is demand (or someone can raise a PR)
 
 ## Download
 
-Get the latest builds from [Releases](https://github.com/itsonlyMiRE/lylatlink/releases/latest).
-
 - [Windows](https://github.com/itsonlyMiRE/lylatlink/releases/latest/download/lylatlink-windows-amd64.zip)
-- [macOS](https://github.com/itsonlyMiRE/lylatlink/releases/latest/download/lylatlink-macos-arm64.zip)
+- [macOS](https://github.com/itsonlyMiRE/lylatlink/releases/latest/download/lylatlink-macos-arm64.zip) (M1/M2/M3/M4 Apple Silicon)
+- Linux and Intel macOS are not currently supported.
 
 ## Setup
 
-1. Download the latest release for your platform.
+1. Download the latest release for your platform above.
 2. Run LylatLink.
 3. Open the tray menu and choose **Replay Folder**.
-4. Select the replay folder configured in Slippi Launcher.
+4. Select the folder that stores your .slp replays. ***Note:** If you organize replays into monthly subfolders, choose the parent Slippi folder; i.e., if they save to [path]/Slippi/2026-06, select the 'Slippi' folder.*
 
 If needed, you can find the folder location in Slippi Launcher under Replay settings:
 
 ![Slippi Launcher replay folder setting](docs/images/slippi-replay-folder.png)
 
 That is the only required setup.
-
-LylatLink supports both Slippi replay layouts:
-
-```text
-Slippi/*.slp
-Slippi/YYYY-MM/*.slp
-```
 
 ## Audio
 

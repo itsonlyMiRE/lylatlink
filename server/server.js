@@ -6,6 +6,7 @@ const { URL } = require("node:url");
 
 const DEFAULT_TTL_MS = 30_000;
 const DEFAULT_ROOM_TTL_MS = 4 * 60 * 60 * 1000;
+const DEFAULT_TURN_TTL_SECONDS = 8 * 60;
 
 function createServer(options = {}) {
   const state = {
@@ -131,7 +132,7 @@ async function handleMatchEnd(state, req, res) {
   }
 
   for (const [key, pending] of state.pending.entries()) {
-    if (pending.matchId === body.matchId) {
+    if (pending.matchId === body.matchId && pending.submissions.has(body.clientNonce)) {
       clearTimeout(pending.timer);
       for (const waiter of pending.waiters.values()) {
         sendJSON(waiter.res, 200, { status: "ended" });
@@ -250,7 +251,7 @@ function makeTurnCredentials() {
   if (!secret || urls.length === 0) {
     return {};
   }
-  const ttl = Number(process.env.TURN_TTL_SECONDS || 3600);
+  const ttl = Number(process.env.TURN_TTL_SECONDS || DEFAULT_TURN_TTL_SECONDS);
   const timestamp = Math.floor(Date.now() / 1000) + ttl;
   const username = `${timestamp}:${crypto.randomUUID()}`;
   const credential = crypto.createHmac("sha1", secret).update(username).digest("base64");
@@ -449,7 +450,7 @@ function rateLimit(state, req) {
   const ip = req.socket.remoteAddress || "unknown";
   const now = Date.now();
   const windowMs = 60_000;
-  const max = 30;
+  const max = 20;
   const item = state.rate.get(ip) || { count: 0, resetAt: now + windowMs };
   if (now > item.resetAt) {
     item.count = 0;

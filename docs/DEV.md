@@ -200,6 +200,10 @@ With no TURN credentials configured, peers can connect only when ICE can find a 
 
 For production internet use, run a TURN server such as coturn and configure the signaling server with `TURN_SECRET` and `TURN_URLS`. When TURN credentials are present, the Go client uses relay-only ICE, so clients connect out to TURN and do not need to open inbound ports on their router. Users may still see normal OS firewall prompts for the app's outbound network activity.
 
+Generated TURN credentials default to an 8-minute TTL, matching the practical upper bound of a Melee match. Longer calls can reconnect on a later match; shorter credentials reduce the window for relay abuse if someone scripts against the public signaling endpoint.
+
+The signaling server currently rate-limits each source IP to 20 requests per minute across all HTTP routes. `/match/end` only closes pending matches when the ending nonce already submitted that pending match.
+
 ## Infra
 
 `infra/` contains Terraform for one EC2-backed ECS host running two services: the Node signaling server and coturn. It also creates ECR repos, CloudWatch logs, security groups, an Elastic IP, and an SSM SecureString for the TURN shared secret.

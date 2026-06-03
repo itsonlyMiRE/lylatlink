@@ -91,7 +91,7 @@ variable "turn_realm" {
 variable "turn_ttl_seconds" {
   type        = number
   description = "TTL for generated TURN credentials returned by signaling."
-  default     = 3600
+  default     = 480
 }
 
 variable "turn_secret_value" {
