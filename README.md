@@ -20,12 +20,12 @@ Implemented:
 - It decodes incoming Opus/PCMU audio and plays it through the system default speaker.
 - It has a system tray mode with status, match label, auto-join toggle, end call, input/output device choosers, replay folder picker, config-file opener, codec/playback display, and quit.
 - The Node signaling server exposes `POST /match/start`, `POST /match/end`, and `WSS /signal`.
+- Terraform infra can run the signaling server and coturn on one EC2-backed ECS host.
 
 Not implemented yet:
 
 - Global end-call hotkey.
-- Bundled macOS `.app` / Windows release artifacts.
-- TURN relay process. The signaling server can return TURN credentials from env, but coturn itself runs separately.
+- Bundled macOS `.app`, Windows installer, and automated release artifacts.
 
 ## Run The Signaling Server
 
@@ -47,9 +47,9 @@ TURN_URLS="turn:your-turn.example:3478,turn:your-turn.example:443?transport=tcp"
 npm run server
 ```
 
-## Run The Client Daemon
+## Run The Client
 
-Create or edit `~/.config/lylatlink/config.toml`:
+Create or edit the LylatLink config file. The default path is resolved through XDG-style app config directories; on macOS this is usually `~/Library/Application Support/lylatlink/config.toml`, and on Windows it is under `%APPDATA%\lylatlink\config.toml`.
 
 ```toml
 replay_dir = "/Users/you/Documents/Slippi"
@@ -72,7 +72,7 @@ The default app mode is the system tray. Run in foreground console mode for debu
 go run ./cmd/lylatlink -console
 ```
 
-In tray mode, the Replay Folder item opens a native folder picker. Choosing a folder saves `replay_dir`, restarts the watcher, and works from a first-run "Not Ready" state.
+In tray mode, the Replay Folder item opens a native folder picker, and Edit Config File opens the active config file. Choosing a replay folder saves `replay_dir`, restarts the watcher, and works from a first-run "Not Ready" state.
 
 Useful overrides:
 
@@ -194,9 +194,9 @@ For production internet use, run a TURN server such as coturn and configure the 
 
 ## Infra
 
-`infra/` contains Terraform for one EC2-backed ECS host running two services: the Node signaling server and coturn. It also creates ECR repos, CloudWatch logs, security groups, and an SSM SecureString for the TURN shared secret.
+`infra/` contains Terraform for one EC2-backed ECS host running two services: the Node signaling server and coturn. It also creates ECR repos, CloudWatch logs, security groups, an Elastic IP, and an SSM SecureString for the TURN shared secret.
 
-Local Docker image builds are wired through Terraform `null_resource`s and push to ECR. Keep `infra/prod.tfvars`, state files, and environment files out of git.
+Local Podman image builds are wired through Terraform `null_resource`s and push to ECR. Keep `infra/prod.tfvars`, state files, and environment files out of git.
 
 For a Cloudflare-managed domain, leave Route 53 variables empty and set `signaling_hostname` / `turn_hostname` in `infra/prod.tfvars`. Create matching Cloudflare `A` records manually, pointing at the Terraform `ecs_public_ip` output. These records must be DNS-only, not proxied:
 
