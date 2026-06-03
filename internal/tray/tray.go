@@ -17,7 +17,7 @@ import (
 	"lylatlink/internal/audio"
 )
 
-const projectURL = "https://github.com/mire/lylatlink"
+const projectURL = "https://github.com/itsonlyMiRE/lylatlink"
 
 type Runner struct {
 	Controller *app.Controller
@@ -32,6 +32,9 @@ type menu struct {
 	editConfig    *systray.MenuItem
 	replayFolder  *systray.MenuItem
 	codec         *systray.MenuItem
+	inputGain     *systray.MenuItem
+	outputGain    *systray.MenuItem
+	noiseGate     *systray.MenuItem
 	playback      *systray.MenuItem
 	autoJoin      *systray.MenuItem
 	endCall       *systray.MenuItem
@@ -84,6 +87,12 @@ func (r *Runner) ready(ctx context.Context) {
 	m.editConfig = systray.AddMenuItem("Edit Config File", "Open LylatLink config file")
 	m.codec = systray.AddMenuItem("Codec: opus", "Configured voice codec")
 	m.codec.Disable()
+	m.inputGain = systray.AddMenuItem("Input Gain: 0.0 dB", "Configured microphone gain")
+	m.inputGain.Disable()
+	m.outputGain = systray.AddMenuItem("Output Gain: -1.5 dB", "Configured remote playback gain")
+	m.outputGain.Disable()
+	m.noiseGate = systray.AddMenuItem("Noise Gate: -55.0 dBFS", "Configured microphone noise gate threshold")
+	m.noiseGate.Disable()
 	m.playback = systray.AddMenuItem("Playback: on", "Remote speaker playback state")
 	m.playback.Disable()
 	systray.AddSeparator()
@@ -202,6 +211,9 @@ func (m *menu) update(status app.Status) {
 	m.match.SetTitle(matchTitle(status))
 	m.replayFolder.SetTitle(replayTitle(status.ReplayDir))
 	m.codec.SetTitle(fmt.Sprintf("Codec: %s", status.AudioCodec))
+	m.inputGain.SetTitle(fmt.Sprintf("Input Gain: %.1f dB", status.InputGainDB))
+	m.outputGain.SetTitle(fmt.Sprintf("Output Gain: %.1f dB", status.OutputGainDB))
+	m.noiseGate.SetTitle(fmt.Sprintf("Noise Gate: %.1f dBFS", status.NoiseGateDB))
 	if status.NoPlayback {
 		m.playback.SetTitle("Playback: off")
 	} else {

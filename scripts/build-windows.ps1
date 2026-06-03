@@ -154,7 +154,6 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 $appExe = Join-Path $out "lylatlink.exe"
 $consoleExe = Join-Path $out "lylatlink-console.exe"
-$launcher = Join-Path $out "Start-LylatLink-Tray.cmd"
 
 & go build -trimpath -ldflags "-s -w" -o $consoleExe ./cmd/lylatlink
 if ($LASTEXITCODE -ne 0) {
@@ -170,15 +169,9 @@ foreach ($dll in @("libopus-0.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll")
     $source = Join-Path $mingwBin $dll
     if (Test-Path $source) {
         Copy-Item -Force $source (Join-Path $out $dll)
-    }
+	}
 }
-
-@"
-@echo off
-start "" "%~dp0lylatlink.exe"
-"@ | Set-Content -Encoding ASCII $launcher
 
 Write-Host "Built:"
 Write-Host "  $appExe"
 Write-Host "  $consoleExe"
-Write-Host "  $launcher"

@@ -52,6 +52,9 @@ type Options struct {
 	InputDeviceID     string
 	OutputDeviceID    string
 	AudioCodec        string
+	InputGainDB       float64
+	OutputGainDB      float64
+	NoiseGateDB       float64
 	UseSyntheticAudio bool
 	DisablePlayback   bool
 }
@@ -257,9 +260,9 @@ func (c *WebRTCController) addAudio(ctx context.Context, matchID string, pc *web
 	codec := normalizeAudioCodec(c.Options.AudioCodec)
 	switch codec {
 	case audioCodecOpus:
-		if err := addMicOpus(ctx, matchID, pc, c.Options.InputDeviceID); err != nil {
+		if err := addMicOpus(ctx, matchID, pc, c.Options); err != nil {
 			log.Printf("Opus mic audio unavailable; falling back to PCMU: %s: %v", matchID, err)
-			if fallbackErr := addMicPCMU(ctx, matchID, pc, c.Options.InputDeviceID); fallbackErr == nil {
+			if fallbackErr := addMicPCMU(ctx, matchID, pc, c.Options); fallbackErr == nil {
 				return nil
 			} else {
 				log.Printf("live PCMU mic audio unavailable; falling back to synthetic PCMU: %s: %v", matchID, fallbackErr)
@@ -268,7 +271,7 @@ func (c *WebRTCController) addAudio(ctx context.Context, matchID string, pc *web
 		}
 		return nil
 	case audioCodecPCMU:
-		if err := addMicPCMU(ctx, matchID, pc, c.Options.InputDeviceID); err != nil {
+		if err := addMicPCMU(ctx, matchID, pc, c.Options); err != nil {
 			log.Printf("live PCMU mic audio unavailable; falling back to synthetic PCMU: %s: %v", matchID, err)
 			return addSyntheticAudio(ctx, matchID, pc)
 		}
@@ -279,9 +282,9 @@ func (c *WebRTCController) addAudio(ctx context.Context, matchID string, pc *web
 	}
 }
 
-func addMicOpus(ctx context.Context, matchID string, pc *webrtc.PeerConnection, inputDeviceID string) error {
+func addMicOpus(ctx context.Context, matchID string, pc *webrtc.PeerConnection, opts Options) error {
 	capture, err := audio.StartCapture(ctx, audio.CaptureOptions{
-		InputDeviceID:     inputDeviceID,
+		InputDeviceID:     opts.InputDeviceID,
 		FallbackToDefault: true,
 	})
 	if err != nil {
@@ -310,26 +313,28 @@ func addMicOpus(ctx context.Context, matchID string, pc *webrtc.PeerConnection, 
 	go drainSenderRTCP(sender)
 
 	log.Printf(
-		"live mic audio started: %s device=%q sampleRate=%d channels=%d format=%s codec=Opus bitrate=%dbps",
+		"live mic audio started: %s device=%q sampleRate=%d channels=%d format=%s codec=Opus bitrate=%dbps inputGain=%.1fdB noiseGate=%.1fdBFS",
 		matchID,
 		capture.DeviceName,
 		capture.SampleRate,
 		capture.Channels,
 		capture.Format,
 		llcodec.OpusBitrate,
+		opts.InputGainDB,
+		normalizeNoiseGateDB(opts.NoiseGateDB),
 	)
 
 	go func() {
 		defer capture.Stop()
 		defer encoder.Close()
-		sendMicOpus(ctx, matchID, track, encoder, capture.Frames)
+		sendMicOpus(ctx, matchID, track, encoder, capture.Frames, newMicProcessor(opts.InputGainDB, opts.NoiseGateDB))
 	}()
 	return nil
 }
 
-func addMicPCMU(ctx context.Context, matchID string, pc *webrtc.PeerConnection, inputDeviceID string) error {
+func addMicPCMU(ctx context.Context, matchID string, pc *webrtc.PeerConnection, opts Options) error {
 	capture, err := audio.StartCapture(ctx, audio.CaptureOptions{
-		InputDeviceID:     inputDeviceID,
+		InputDeviceID:     opts.InputDeviceID,
 		FallbackToDefault: true,
 	})
 	if err != nil {
@@ -350,17 +355,19 @@ func addMicPCMU(ctx context.Context, matchID string, pc *webrtc.PeerConnection, 
 	go drainSenderRTCP(sender)
 
 	log.Printf(
-		"live mic audio started: %s device=%q sampleRate=%d channels=%d format=%s codec=PCMU",
+		"live mic audio started: %s device=%q sampleRate=%d channels=%d format=%s codec=PCMU inputGain=%.1fdB noiseGate=%.1fdBFS",
 		matchID,
 		capture.DeviceName,
 		capture.SampleRate,
 		capture.Channels,
 		capture.Format,
+		opts.InputGainDB,
+		normalizeNoiseGateDB(opts.NoiseGateDB),
 	)
 
 	go func() {
 		defer capture.Stop()
-		sendMicPCMU(ctx, matchID, track, capture.Frames)
+		sendMicPCMU(ctx, matchID, track, capture.Frames, newMicProcessor(opts.InputGainDB, opts.NoiseGateDB))
 	}()
 	return nil
 }
@@ -420,7 +427,92 @@ func drainSenderRTCP(sender *webrtc.RTPSender) {
 	}
 }
 
-func sendMicOpus(ctx context.Context, matchID string, track *webrtc.TrackLocalStaticSample, encoder *llcodec.OpusEncoder, frames <-chan []int16) {
+type micProcessor struct {
+	gainDB      float64
+	noiseGateDB float64
+	holdFrames  int
+}
+
+func newMicProcessor(inputGainDB, noiseGateDB float64) *micProcessor {
+	return &micProcessor{
+		gainDB:      inputGainDB,
+		noiseGateDB: normalizeNoiseGateDB(noiseGateDB),
+	}
+}
+
+func (p *micProcessor) process(frame []int16) []int16 {
+	if p == nil || len(frame) == 0 {
+		return frame
+	}
+
+	if p.noiseGateDB > -100 {
+		rms := frameRMS(frame)
+		if rms > 0 && dbFS(rms) >= p.noiseGateDB {
+			p.holdFrames = 6
+		} else if p.holdFrames > 0 {
+			p.holdFrames--
+		} else {
+			clearFrame(frame)
+		}
+	}
+
+	applyGainInPlace(frame, p.gainDB)
+	return frame
+}
+
+func normalizeNoiseGateDB(value float64) float64 {
+	if value == 0 {
+		return -55
+	}
+	return value
+}
+
+func applyGainInPlace(frame []int16, gainDB float64) {
+	if len(frame) == 0 || gainDB == 0 {
+		return
+	}
+	gain := math.Pow(10, gainDB/20)
+	for i, sample := range frame {
+		frame[i] = clipSample(float64(sample) * gain)
+	}
+}
+
+func clearFrame(frame []int16) {
+	for i := range frame {
+		frame[i] = 0
+	}
+}
+
+func frameRMS(frame []int16) float64 {
+	if len(frame) == 0 {
+		return 0
+	}
+	sumSquares := 0.0
+	for _, sample := range frame {
+		v := float64(sample)
+		sumSquares += v * v
+	}
+	return math.Sqrt(sumSquares / float64(len(frame)))
+}
+
+func dbFS(sample float64) float64 {
+	if sample <= 0 {
+		return math.Inf(-1)
+	}
+	return 20 * math.Log10(sample/32768.0)
+}
+
+func clipSample(value float64) int16 {
+	if value > 32767 {
+		return 32767
+	}
+	if value < -32768 {
+		return -32768
+	}
+	return int16(math.Round(value))
+}
+
+func sendMicOpus(ctx context.Context, matchID string, track *webrtc.TrackLocalStaticSample, encoder *llcodec.OpusEncoder, frames <-chan []int16, processor *micProcessor) {
 	out := make([]byte, llcodec.OpusMaxPacketBytes)
 	for {
 		select {
@@ -430,6 +522,7 @@ func sendMicOpus(ctx context.Context, matchID string, track *webrtc.TrackLocalSt
 			if !ok {
 				return
 			}
+			frame = processor.process(frame)
 			n, err := encoder.Encode(frame, out)
 			if err != nil {
 				log.Printf("Opus audio encode failed: %s: %v", matchID, err)
@@ -443,7 +536,7 @@ func sendMicOpus(ctx context.Context, matchID string, track *webrtc.TrackLocalSt
 	}
 }
 
-func sendMicPCMU(ctx context.Context, matchID string, track *webrtc.TrackLocalStaticSample, frames <-chan []int16) {
+func sendMicPCMU(ctx context.Context, matchID string, track *webrtc.TrackLocalStaticSample, frames <-chan []int16, processor *micProcessor) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -452,6 +545,7 @@ func sendMicPCMU(ctx context.Context, matchID string, track *webrtc.TrackLocalSt
 			if !ok {
 				return
 			}
+			frame = processor.process(frame)
 			payload := encodePCMUFrame(frame)
 			if err := track.WriteSample(media.Sample{Data: payload, Duration: audio.FrameDuration}); err != nil {
 				log.Printf("mic audio send failed: %s: %v", matchID, err)
@@ -556,12 +650,13 @@ func (c *WebRTCController) drainRemoteTrack(ctx context.Context, matchID string,
 		} else {
 			defer playback.Stop()
 			log.Printf(
-				"remote audio playback started: %s device=%q sampleRate=%d channels=%d format=%s",
+				"remote audio playback started: %s device=%q sampleRate=%d channels=%d format=%s outputGain=%.1fdB",
 				matchID,
 				playback.DeviceName,
 				playback.SampleRate,
 				playback.Channels,
 				playback.Format,
+				c.Options.OutputGainDB,
 			)
 		}
 	}
@@ -592,6 +687,7 @@ func (c *WebRTCController) drainRemoteTrack(ctx context.Context, matchID string,
 			}
 		}
 		if playback != nil && len(pcm) > 0 {
+			applyGainInPlace(pcm, c.Options.OutputGainDB)
 			playback.Write(pcm)
 		}
 		if line := metrics.observe(packet.SequenceNumber, packet.Payload, len(packet.Payload)+12, time.Now(), pcm); line != "" {

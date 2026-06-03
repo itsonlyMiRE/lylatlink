@@ -29,6 +29,9 @@ func main() {
 		audioInputDevice  = flag.String("audio-input-device", "", "input device ID or exact name for mic capture")
 		audioOutputDevice = flag.String("audio-output-device", "", "output device ID or exact name for remote playback")
 		audioCodec        = flag.String("audio-codec", "", "voice codec: opus or pcmu")
+		inputGainDB       = flag.Float64("input-gain-db", 0, "microphone gain in dB; config value is used when omitted")
+		outputGainDB      = flag.Float64("output-gain-db", 0, "remote playback gain in dB; config value is used when omitted")
+		noiseGateDB       = flag.Float64("noise-gate-db", 0, "noise gate threshold in dBFS; config value is used when omitted")
 		audioTest         = flag.Bool("audio-device-test", false, "capture microphone and print level diagnostics")
 		audioDur          = flag.Duration("audio-test-duration", 10*time.Second, "duration for -audio-device-test")
 		audioDebug        = flag.Bool("audio-test-verbose", false, "include low-level audio backend logs during -audio-device-test")
@@ -135,6 +138,15 @@ func main() {
 	if *audioCodec != "" {
 		cfg.AudioCodec = *audioCodec
 	}
+	if flagWasSet("input-gain-db") {
+		cfg.InputGainDB = *inputGainDB
+	}
+	if flagWasSet("output-gain-db") {
+		cfg.OutputGainDB = *outputGainDB
+	}
+	if flagWasSet("noise-gate-db") {
+		cfg.NoiseGateDB = *noiseGateDB
+	}
 	useTray := *trayMode && !*consoleMode
 	if cfg.ReplayDir == "" && !useTray {
 		path, _ := config.DefaultPath()
@@ -162,4 +174,14 @@ func main() {
 	if err := app.Run(ctx, cfg, opts); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func flagWasSet(name string) bool {
+	wasSet := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			wasSet = true
+		}
+	})
+	return wasSet
 }

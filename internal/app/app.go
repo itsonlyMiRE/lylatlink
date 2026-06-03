@@ -43,6 +43,9 @@ type Status struct {
 	InputDeviceID  string
 	OutputDeviceID string
 	AudioCodec     string
+	InputGainDB    float64
+	OutputGainDB   float64
+	NoiseGateDB    float64
 	NoPlayback     bool
 	MatchID        string
 	MatchLabel     string
@@ -354,6 +357,9 @@ func (c *Controller) newVoiceController(signalClient *signaling.Client) *voice.W
 		InputDeviceID:     cfg.InputDeviceID,
 		OutputDeviceID:    cfg.OutputDeviceID,
 		AudioCodec:        cfg.AudioCodec,
+		InputGainDB:       cfg.InputGainDB,
+		OutputGainDB:      cfg.OutputGainDB,
+		NoiseGateDB:       cfg.NoiseGateDB,
 		UseSyntheticAudio: c.opts.SyntheticAudio,
 		DisablePlayback:   c.opts.NoPlayback,
 	})
@@ -464,6 +470,9 @@ func (c *Controller) status(state State, matchID string, label string, message s
 		InputDeviceID:  cfg.InputDeviceID,
 		OutputDeviceID: cfg.OutputDeviceID,
 		AudioCodec:     cfg.AudioCodec,
+		InputGainDB:    cfg.InputGainDB,
+		OutputGainDB:   cfg.OutputGainDB,
+		NoiseGateDB:    cfg.NoiseGateDB,
 		NoPlayback:     c.opts.NoPlayback,
 		MatchID:        matchID,
 		MatchLabel:     label,

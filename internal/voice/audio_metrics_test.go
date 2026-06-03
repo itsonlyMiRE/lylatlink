@@ -75,3 +75,40 @@ func TestAudioMetricsCountsSequenceGaps(t *testing.T) {
 		t.Fatalf("expected sequence gap count in stats line:\n%s", line)
 	}
 }
+
+func TestApplyGainInPlace(t *testing.T) {
+	frame := []int16{1000, -1000}
+	applyGainInPlace(frame, 6)
+	if frame[0] < 1900 || frame[0] > 2100 {
+		t.Fatalf("positive sample after gain = %d, want about 2000", frame[0])
+	}
+	if frame[1] > -1900 || frame[1] < -2100 {
+		t.Fatalf("negative sample after gain = %d, want about -2000", frame[1])
+	}
+}
+
+func TestMicProcessorNoiseGateMutesQuietFrames(t *testing.T) {
+	processor := newMicProcessor(0, -40)
+	frame := []int16{100, -100, 100, -100}
+
+	processor.process(frame)
+
+	for _, sample := range frame {
+		if sample != 0 {
+			t.Fatalf("quiet sample was not gated: %d", sample)
+		}
+	}
+}
+
+func TestMicProcessorNoiseGateKeepsLoudFrames(t *testing.T) {
+	processor := newMicProcessor(0, -40)
+	frame := []int16{12000, -12000, 12000, -12000}
+
+	processor.process(frame)
+
+	for _, sample := range frame {
+		if sample == 0 {
+			t.Fatal("loud frame was gated")
+		}
+	}
+}
