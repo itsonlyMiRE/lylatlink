@@ -7,6 +7,25 @@ resource "aws_ecr_repository" "signaling" {
   }
 }
 
+resource "aws_ecr_lifecycle_policy" "signaling" {
+  repository = aws_ecr_repository.signaling.name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep the latest three images."
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 3
+      }
+      action = {
+        type = "expire"
+      }
+    }]
+  })
+}
+
 resource "aws_ecr_repository" "turn" {
   name                 = "${local.name_prefix}-turn"
   image_tag_mutability = "MUTABLE"
@@ -14,6 +33,25 @@ resource "aws_ecr_repository" "turn" {
   image_scanning_configuration {
     scan_on_push = true
   }
+}
+
+resource "aws_ecr_lifecycle_policy" "turn" {
+  repository = aws_ecr_repository.turn.name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep the latest three images."
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 3
+      }
+      action = {
+        type = "expire"
+      }
+    }]
+  })
 }
 
 resource "null_resource" "build_signaling_image" {
