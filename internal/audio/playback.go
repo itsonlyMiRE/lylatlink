@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/gen2brain/malgo"
@@ -132,6 +133,24 @@ func (p *Playback) Write(frame []int16) bool {
 	return true
 }
 
+func (p *Playback) PlayPCM(ctx context.Context, samples []int16) bool {
+	for len(samples) > 0 {
+		frameSize := FrameSize
+		if len(samples) < frameSize {
+			frameSize = len(samples)
+		}
+		frame := samples[:frameSize]
+		if !p.Write(frame) {
+			return false
+		}
+		samples = samples[frameSize:]
+		if !sleepContext(ctx, durationForSamples(frameSize)) {
+			return false
+		}
+	}
+	return true
+}
+
 func (p *Playback) Stop() {
 	p.stopOnce.Do(func() {
 		p.stopped.Store(true)
@@ -195,5 +214,23 @@ func (b *sampleBuffer) fillS16(output []byte) {
 	if available > 0 {
 		copy(b.samples, b.samples[available:])
 		b.samples = b.samples[:len(b.samples)-available]
+	}
+}
+
+func durationForSamples(samples int) time.Duration {
+	return time.Duration(samples) * time.Second / SampleRate
+}
+
+func sleepContext(ctx context.Context, duration time.Duration) bool {
+	if duration <= 0 {
+		return true
+	}
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
 	}
 }

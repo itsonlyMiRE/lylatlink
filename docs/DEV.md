@@ -11,6 +11,7 @@ Implemented:
 - Go client daemon parses minimal Slippi `Game Start` / `Game End` data.
 - It watches replay folders for live `.slp` files, including both flat `Slippi/*.slp` and grouped `Slippi/YYYY-MM/*.slp` layouts. Startup scans only recently modified replays so stale files do not briefly look live, and missing `Game End` is handled with file-stability fallback.
 - It can pair matches with either two unique connect codes or one deduped connect code, which allows self-match testing where both replay files expose the same Slippi connect code.
+- If `replay_dir` is unset, it auto-detects the replay folder from Slippi Launcher settings, then known Slippi Dolphin config locations, then the default Slippi folder.
 - It submits match start/end events to the signaling server.
 - It uses an ephemeral per-launch `clientNonce` for duplicate suppression.
 - Once paired, it opens a Pion WebRTC peer connection over `/signal`.
@@ -20,6 +21,7 @@ Implemented:
 - It sends live microphone frames through WebRTC as Opus by default, with PCMU as a fallback/test codec.
 - It applies configurable input gain, output gain, and microphone noise gate threshold during voice sessions.
 - It decodes incoming Opus/PCMU audio and plays it through the selected/default speaker or headphones.
+- It plays an embedded connection chime through the selected/default output device before remote voice playback starts.
 - It has a system tray mode with app icon, status, match label, auto-join toggle, end call, input/output device choosers, replay folder picker, config-file opener, codec/playback display, input/output/noise gate readouts, and quit.
 - The Node signaling server exposes `POST /match/start`, `POST /match/end`, and `WSS /signal`.
 - The signaling server issues coturn-compatible TURN credentials with an 8-minute default TTL, rate-limits each source IP, and prevents unrelated nonces from ending pending matches.
@@ -32,11 +34,9 @@ TODO:
 
 - Global end-call hotkey.
 - GitHub Release publishing.
-- Voice connected chime sound.
 - UI controls for audio tuning - input/output gain levels, noise gate threshold
 - In-game overlay: show connection status (red Disconnected / green Connected, plus player codes), input/output/noise gate levels, togglable with configurable scale/position/transparency
 - Launch-with-Slippi helper shortcut
-- Auto-detect .slp folder from Slippi Launcher config
 - 4 player support
 - Intel Mac + Linux
 
@@ -88,7 +88,7 @@ The default app mode is the system tray. Run in foreground console mode for debu
 go run ./cmd/lylatlink -console
 ```
 
-In tray mode, the Replay Folder item opens a native folder picker, and Edit Config File opens the active config file. Choosing a replay folder saves `replay_dir`, restarts the watcher, and works from a first-run "Not Ready" state.
+In tray mode, the Replay Folder item opens a native folder picker, and Edit Config File opens the active config file. Choosing a replay folder saves `replay_dir`, restarts the watcher, and works from a first-run "Not Ready" state. If `replay_dir` is empty, startup auto-detects Slippi's replay folder from the Slippi Launcher `Settings` file, then known Slippi Dolphin `Dolphin.ini` locations, then the platform default Slippi folder.
 
 Useful overrides:
 
@@ -103,6 +103,7 @@ Append these audio flags as needed:
 ```bash
 -audio-codec pcmu     # force PCMU instead of Opus
 -audio-output-device "<device-id-or-name>"
+-verbose             # print WebRTC/audio diagnostics, including audio stream stats
 -synthetic-audio      # generated PCMU instead of microphone capture
 -no-playback          # receive/log audio without speaker output
 -ignore-match-end     # test mode: keep voice open after copied replay Game End
@@ -154,6 +155,11 @@ To test WebRTC pairing locally, run the signaling server and two clients with `a
 webrtc data-channel connecting
 webrtc data channel open
 webrtc data channel message
+```
+
+With `-verbose`, successful audio output also includes:
+
+```text
 remote media track
 remote audio playback started
 audio stream stats

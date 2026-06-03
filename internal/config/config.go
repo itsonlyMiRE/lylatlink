@@ -12,16 +12,17 @@ import (
 const appConfigPath = "lylatlink/config.toml"
 
 type Config struct {
-	ReplayDir      string  `toml:"replay_dir"`
-	AutoJoin       bool    `toml:"auto_join"`
-	EndCallHotkey  string  `toml:"end_call_hotkey,omitempty"`
-	InputDeviceID  string  `toml:"input_device_id,omitempty"`
-	OutputDeviceID string  `toml:"output_device_id,omitempty"`
-	AudioCodec     string  `toml:"audio_codec,omitempty"`
-	InputGainDB    float64 `toml:"input_gain_db,omitempty"`
-	OutputGainDB   float64 `toml:"output_gain_db,omitempty"`
-	NoiseGateDB    float64 `toml:"noise_gate_threshold_db,omitempty"`
-	SignalBaseURL  string  `toml:"-"`
+	ReplayDir             string  `toml:"replay_dir"`
+	AutoJoin              bool    `toml:"auto_join"`
+	EndCallHotkey         string  `toml:"end_call_hotkey,omitempty"`
+	InputDeviceID         string  `toml:"input_device_id,omitempty"`
+	OutputDeviceID        string  `toml:"output_device_id,omitempty"`
+	AudioCodec            string  `toml:"audio_codec,omitempty"`
+	InputGainDB           float64 `toml:"input_gain_db,omitempty"`
+	OutputGainDB          float64 `toml:"output_gain_db,omitempty"`
+	NoiseGateDB           float64 `toml:"noise_gate_threshold_db,omitempty"`
+	SignalBaseURL         string  `toml:"-"`
+	ReplayDirAutoDetected bool    `toml:"-"`
 }
 
 func Default() Config {

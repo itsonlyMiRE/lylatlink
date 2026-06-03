@@ -10,3 +10,6 @@ var IconPNG []byte
 
 //go:embed macos/tray-template-32.png
 var MacOSTrayTemplate32PNG []byte
+
+//go:embed chime.wav
+var ChimeWAV []byte

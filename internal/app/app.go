@@ -23,6 +23,7 @@ type Options struct {
 	SyntheticAudio bool
 	NoPlayback     bool
 	IgnoreMatchEnd bool
+	Verbose        bool
 }
 
 type State string
@@ -362,6 +363,7 @@ func (c *Controller) newVoiceController(signalClient *signaling.Client) *voice.W
 		NoiseGateDB:       cfg.NoiseGateDB,
 		UseSyntheticAudio: c.opts.SyntheticAudio,
 		DisablePlayback:   c.opts.NoPlayback,
+		Verbose:           c.opts.Verbose,
 	})
 }
 
@@ -403,6 +405,7 @@ func (c *Controller) setReplayDir(path string) error {
 
 	c.mu.Lock()
 	c.cfg.ReplayDir = path
+	c.cfg.ReplayDirAutoDetected = false
 	cfg := c.cfg
 	c.mu.Unlock()
 	c.saveConfig(cfg)
@@ -412,6 +415,9 @@ func (c *Controller) setReplayDir(path string) error {
 func (c *Controller) saveConfig(cfg config.Config) {
 	if c.cfgPath == "" {
 		return
+	}
+	if cfg.ReplayDirAutoDetected {
+		cfg.ReplayDir = ""
 	}
 	if err := config.Save(c.cfgPath, cfg); err != nil {
 		log.Printf("save config failed: %v", err)

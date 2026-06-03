@@ -16,6 +16,7 @@ import (
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media"
 
+	"lylatlink/assets"
 	"lylatlink/internal/audio"
 	llcodec "lylatlink/internal/codec"
 	"lylatlink/internal/signaling"
@@ -57,6 +58,7 @@ type Options struct {
 	NoiseGateDB       float64
 	UseSyntheticAudio bool
 	DisablePlayback   bool
+	Verbose           bool
 }
 
 type session struct {
@@ -75,6 +77,10 @@ const (
 	audioCodecOpus = "opus"
 	audioCodecPCMU = "pcmu"
 )
+
+var chimeSamplesOnce sync.Once
+var chimeSamples []int16
+var chimeSamplesErr error
 
 func NewWebRTCController(signalClient *signaling.Client, options ...Options) *WebRTCController {
 	opts := Options{}
@@ -104,6 +110,13 @@ func redactToken(token string) string {
 		return "<redacted>"
 	}
 	return token[:4] + "..." + token[len(token)-4:]
+}
+
+func connectionChimeSamples() ([]int16, error) {
+	chimeSamplesOnce.Do(func() {
+		chimeSamples, chimeSamplesErr = audio.DecodePCM16MonoWAV(assets.ChimeWAV)
+	})
+	return chimeSamples, chimeSamplesErr
 }
 
 func (c *WebRTCController) Start(ctx context.Context, matchID string, room signaling.StartResponse) error {
@@ -168,7 +181,9 @@ func (c *WebRTCController) Start(ctx context.Context, matchID string, room signa
 	}
 
 	pc.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
-		log.Printf("remote media track: %s kind=%s codec=%s", matchID, track.Kind(), track.Codec().MimeType)
+		if c.Options.Verbose {
+			log.Printf("remote media track: %s kind=%s codec=%s", matchID, track.Kind(), track.Codec().MimeType)
+		}
 		go c.drainRemoteTrack(sessionCtx, matchID, track)
 	})
 
@@ -293,6 +308,7 @@ func addMicOpus(ctx context.Context, matchID string, pc *webrtc.PeerConnection, 
 	capture, err := audio.StartCapture(ctx, audio.CaptureOptions{
 		InputDeviceID:     opts.InputDeviceID,
 		FallbackToDefault: true,
+		Verbose:           opts.Verbose,
 	})
 	if err != nil {
 		return err
@@ -319,17 +335,19 @@ func addMicOpus(ctx context.Context, matchID string, pc *webrtc.PeerConnection, 
 	}
 	go drainSenderRTCP(sender)
 
-	log.Printf(
-		"live mic audio started: %s device=%q sampleRate=%d channels=%d format=%s codec=Opus bitrate=%dbps inputGain=%.1fdB noiseGate=%.1fdBFS",
-		matchID,
-		capture.DeviceName,
-		capture.SampleRate,
-		capture.Channels,
-		capture.Format,
-		llcodec.OpusBitrate,
-		opts.InputGainDB,
-		normalizeNoiseGateDB(opts.NoiseGateDB),
-	)
+	if opts.Verbose {
+		log.Printf(
+			"live mic audio started: %s device=%q sampleRate=%d channels=%d format=%s codec=Opus bitrate=%dbps inputGain=%.1fdB noiseGate=%.1fdBFS",
+			matchID,
+			capture.DeviceName,
+			capture.SampleRate,
+			capture.Channels,
+			capture.Format,
+			llcodec.OpusBitrate,
+			opts.InputGainDB,
+			normalizeNoiseGateDB(opts.NoiseGateDB),
+		)
+	}
 
 	go func() {
 		defer capture.Stop()
@@ -343,6 +361,7 @@ func addMicPCMU(ctx context.Context, matchID string, pc *webrtc.PeerConnection, 
 	capture, err := audio.StartCapture(ctx, audio.CaptureOptions{
 		InputDeviceID:     opts.InputDeviceID,
 		FallbackToDefault: true,
+		Verbose:           opts.Verbose,
 	})
 	if err != nil {
 		return err
@@ -361,16 +380,18 @@ func addMicPCMU(ctx context.Context, matchID string, pc *webrtc.PeerConnection, 
 	}
 	go drainSenderRTCP(sender)
 
-	log.Printf(
-		"live mic audio started: %s device=%q sampleRate=%d channels=%d format=%s codec=PCMU inputGain=%.1fdB noiseGate=%.1fdBFS",
-		matchID,
-		capture.DeviceName,
-		capture.SampleRate,
-		capture.Channels,
-		capture.Format,
-		opts.InputGainDB,
-		normalizeNoiseGateDB(opts.NoiseGateDB),
-	)
+	if opts.Verbose {
+		log.Printf(
+			"live mic audio started: %s device=%q sampleRate=%d channels=%d format=%s codec=PCMU inputGain=%.1fdB noiseGate=%.1fdBFS",
+			matchID,
+			capture.DeviceName,
+			capture.SampleRate,
+			capture.Channels,
+			capture.Format,
+			opts.InputGainDB,
+			normalizeNoiseGateDB(opts.NoiseGateDB),
+		)
+	}
 
 	go func() {
 		defer capture.Stop()
@@ -651,24 +672,31 @@ func (c *WebRTCController) drainRemoteTrack(ctx context.Context, matchID string,
 		playback, err = audio.StartPlayback(ctx, audio.PlaybackOptions{
 			OutputDeviceID:    c.Options.OutputDeviceID,
 			FallbackToDefault: true,
+			Verbose:           c.Options.Verbose,
 		})
 		if err != nil {
 			log.Printf("remote audio playback unavailable: %s: %v", matchID, err)
 		} else {
 			defer playback.Stop()
-			log.Printf(
-				"remote audio playback started: %s device=%q sampleRate=%d channels=%d format=%s outputGain=%.1fdB",
-				matchID,
-				playback.DeviceName,
-				playback.SampleRate,
-				playback.Channels,
-				playback.Format,
-				c.Options.OutputGainDB,
-			)
+			playConnectionChime(ctx, matchID, playback, c.Options.Verbose)
+			if c.Options.Verbose {
+				log.Printf(
+					"remote audio playback started: %s device=%q sampleRate=%d channels=%d format=%s outputGain=%.1fdB",
+					matchID,
+					playback.DeviceName,
+					playback.SampleRate,
+					playback.Channels,
+					playback.Format,
+					c.Options.OutputGainDB,
+				)
+			}
 		}
 	}
 
-	metrics := newAudioMetrics(matchID, codec.MimeType, codec.ClockRate, time.Now())
+	var metrics *audioMetrics
+	if c.Options.Verbose {
+		metrics = newAudioMetrics(matchID, codec.MimeType, codec.ClockRate, time.Now())
+	}
 
 	for {
 		select {
@@ -697,10 +725,29 @@ func (c *WebRTCController) drainRemoteTrack(ctx context.Context, matchID string,
 			applyGainInPlace(pcm, c.Options.OutputGainDB)
 			playback.Write(pcm)
 		}
+		if metrics == nil {
+			continue
+		}
 		if line := metrics.observe(packet.SequenceNumber, packet.Payload, len(packet.Payload)+12, time.Now(), pcm); line != "" {
 			log.Print(line)
 		}
 	}
+}
+
+func playConnectionChime(ctx context.Context, matchID string, playback *audio.Playback, verbose bool) {
+	samples, err := connectionChimeSamples()
+	if err != nil {
+		log.Printf("connection chime unavailable: %s: %v", matchID, err)
+		return
+	}
+	if verbose {
+		log.Printf("connection chime started: %s duration=%s", matchID, durationForAudioSamples(len(samples)).Round(time.Millisecond))
+	}
+	playback.PlayPCM(ctx, samples)
+}
+
+func durationForAudioSamples(samples int) time.Duration {
+	return time.Duration(samples) * time.Second / audio.SampleRate
 }
 
 type audioMetrics struct {

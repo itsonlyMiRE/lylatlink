@@ -1,4 +1,4 @@
-replay_dir = "/Users/you/Documents/Slippi"
+replay_dir = "" # optional; empty means auto-detect from Slippi Launcher/Dolphin settings
 auto_join = true
 input_device_id = ""
 output_device_id = ""

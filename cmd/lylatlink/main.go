@@ -35,6 +35,7 @@ func main() {
 		audioTest         = flag.Bool("audio-device-test", false, "capture microphone and print level diagnostics")
 		audioDur          = flag.Duration("audio-test-duration", 10*time.Second, "duration for -audio-device-test")
 		audioDebug        = flag.Bool("audio-test-verbose", false, "include low-level audio backend logs during -audio-device-test")
+		verbose           = flag.Bool("verbose", false, "enable verbose WebRTC/audio diagnostics")
 		syntheticAudio    = flag.Bool("synthetic-audio", false, "send synthetic PCMU audio instead of live microphone audio")
 		noPlayback        = flag.Bool("no-playback", false, "disable remote speaker playback")
 		ignoreMatchEnd    = flag.Bool("ignore-match-end", false, "test mode: keep voice open when copied replays contain Game End")
@@ -43,7 +44,7 @@ func main() {
 	)
 	flag.Parse()
 
-	needsConsole := *consoleMode || *once != "" || *listAudioDevices || *listOutputDevices || *audioTest
+	needsConsole := *consoleMode || *verbose || *once != "" || *listAudioDevices || *listOutputDevices || *audioTest
 	if needsConsole {
 		if err := console.Enable(); err != nil {
 			log.Printf("enable console failed: %v", err)
@@ -122,6 +123,18 @@ func main() {
 
 	if *replayDir != "" {
 		cfg.ReplayDir = *replayDir
+	} else if cfg.ReplayDir == "" {
+		resolution, err := config.ResolveReplayDir()
+		if err != nil {
+			log.Printf("auto-detect replay folder failed: %v", err)
+		} else {
+			cfg.ReplayDir = resolution.Path
+			cfg.ReplayDirAutoDetected = true
+			log.Printf("auto-detected replay folder from %s: %s", resolution.Source, resolution.Path)
+			if resolution.EnableNetplayReplays != nil && !*resolution.EnableNetplayReplays {
+				log.Printf("Slippi netplay replay saving appears disabled; LylatLink may not detect live matches")
+			}
+		}
 	}
 	if *signalURL != "" {
 		cfg.SignalBaseURL = *signalURL
@@ -154,7 +167,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	opts := app.Options{SyntheticAudio: *syntheticAudio, NoPlayback: *noPlayback, IgnoreMatchEnd: *ignoreMatchEnd}
+	opts := app.Options{SyntheticAudio: *syntheticAudio, NoPlayback: *noPlayback, IgnoreMatchEnd: *ignoreMatchEnd, Verbose: *verbose}
 	if useTray {
 		trayCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
