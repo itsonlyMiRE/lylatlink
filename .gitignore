@@ -1,0 +1,16 @@
+.DS_Store
+node_modules/
+dist/
+build/
+/LylatLink.app/
+/lylatlink
+/lylatlink.exe
+lylatlink-plan.md
+coverage/
+.env
+.env.*
+*.log
+infra/*.tfvars
+infra/*.tfstate
+infra/*.tfstate.*
+infra/.terraform/

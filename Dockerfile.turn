@@ -1,0 +1,5 @@
+FROM coturn/coturn:latest
+
+EXPOSE 3478/tcp
+EXPOSE 3478/udp
+

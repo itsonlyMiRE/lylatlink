@@ -1,0 +1,6 @@
+replay_dir = "/Users/you/Documents/Slippi"
+auto_join = true
+input_device_id = ""
+output_device_id = ""
+audio_codec = "opus"
+end_call_hotkey = "f8"

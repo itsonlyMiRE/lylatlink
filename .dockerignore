@@ -1,0 +1,14 @@
+.git
+.terraform
+infra/.terraform
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+node_modules
+coverage
+dist
+build
+LylatLink.app
+lylatlink
+lylatlink.exe
+*.log
