@@ -1,3 +1,5 @@
+# replay_dir is a fallback.
+# Leave it empty unless LylatLink cannot auto-detect your Slippi replay folder.
 replay_dir = "" # optional; empty means auto-detect from Slippi Launcher/Dolphin settings
 auto_join = true
 input_device_id = ""

@@ -12,6 +12,10 @@ import (
 
 const appConfigPath = "lylatlink/config.toml"
 
+const configHeader = `# replay_dir is a fallback.
+# Leave it empty unless LylatLink cannot auto-detect your Slippi replay folder.
+`
+
 type Config struct {
 	ReplayDir             string  `toml:"replay_dir"`
 	AutoJoin              bool    `toml:"auto_join"`
@@ -83,6 +87,9 @@ func Save(path string, cfg Config) error {
 		return err
 	}
 	defer f.Close()
+	if _, err := f.WriteString(configHeader); err != nil {
+		return err
+	}
 	return toml.NewEncoder(f).Encode(cfg)
 }
 

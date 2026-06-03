@@ -45,6 +45,9 @@ func TestSaveNormalizesWindowsReplayDir(t *testing.T) {
 	if !strings.Contains(text, `replay_dir = "C:/Users/mire/Slippi"`) {
 		t.Fatalf("config did not use normalized path:\n%s", text)
 	}
+	if !strings.Contains(text, "# replay_dir is a fallback.") {
+		t.Fatalf("config did not include replay_dir comment:\n%s", text)
+	}
 
 	cfg, err := LoadOrCreate(path)
 	if err != nil {
