@@ -79,16 +79,28 @@ Add-PathPrefix (Join-Path $msysRoot "usr\bin")
 
 $mingwBin = Join-Path $msysRoot "$mingwDir\bin"
 $gccExe = Join-Path $mingwBin "gcc.exe"
-$pkgConfigExe = Join-Path $mingwBin "pkg-config.exe"
-if (-not (Test-Path $pkgConfigExe)) {
-    $pkgConfigExe = Join-Path $mingwBin "pkgconf.exe"
+$pkgConfigCandidates = @(
+    (Join-Path $mingwBin "pkg-config.exe"),
+    (Join-Path $mingwBin "pkgconf.exe"),
+    (Join-Path $mingwBin "x86_64-w64-mingw32-pkg-config.exe"),
+    (Join-Path $mingwBin "x86_64-w64-mingw32-pkgconf.exe"),
+    (Join-Path $msysRoot "usr\bin\pkg-config.exe"),
+    (Join-Path $msysRoot "usr\bin\pkgconf.exe")
+)
+
+$pkgConfigExe = $null
+foreach ($candidate in $pkgConfigCandidates) {
+    if (Test-Path $candidate) {
+        $pkgConfigExe = $candidate
+        break
+    }
 }
 
 if (-not (Test-Path $gccExe)) {
     throw "gcc was not found at $gccExe"
 }
-if (-not (Test-Path $pkgConfigExe)) {
-    throw "pkg-config/pkgconf was not found in $mingwBin"
+if (-not $pkgConfigExe) {
+    throw "pkg-config/pkgconf was not found in $mingwBin or $msysRoot\usr\bin"
 }
 
 $opusPc = Get-ChildItem -Path $msysRoot -Filter "opus.pc" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
