@@ -28,7 +28,11 @@ Core details:
 ## Setup
 
 1. Download the latest release for your platform above.
-2. Run LylatLink.
+2. Run LylatLink
+    - Windows: Unzip, run `lylatlink.exe`
+    - Mac: Unzip, move `LylatLink.app` into your `Applications` folder and run.
+
+      NOTE: I have no interest in paying $99/yr to Apple so you will probably get a security warning when running for the first time. Click here for the steps to remediate this and trust the app.
 3. Play!
 
 To use LylatLink, Slippi must be configured to save .slp replays. LylatLink will try to find your Slippi replay folder automatically using your Slippi Launcher and Dolphin settings. If it does not, open the tray menu, choose **Replay Folder**, and select the folder that stores your .slp replays. ***Note:** If you organize replays into monthly subfolders, choose the parent folder; i.e., if they save to [path]/Slippi/2026-06, select the 'Slippi' folder.*

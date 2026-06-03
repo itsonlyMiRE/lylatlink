@@ -34,9 +34,8 @@ TODO:
 
 - Global end-call hotkey.
 - GitHub Release publishing.
-- More precise platform-specific run instructions.
 - UI controls for audio tuning - input/output gain levels, noise gate threshold
-- In-game overlay: show connection status (red Disconnected / green Connected, plus player codes), input/output/noise gate levels, togglable with configurable scale/position/transparency
+- Desktop overlay: show red/green connection status and player codes. Works best in windowed/borderless Slippi; exclusive fullscreen may cover it. Include locked click-through status mode plus edit mode with sliders for input gain, output gain, and noise gate threshold, with buttons to lock/unlock UI.
 - Launch-with-Slippi helper shortcut
 - 4 player support
 - Intel Mac + Linux
