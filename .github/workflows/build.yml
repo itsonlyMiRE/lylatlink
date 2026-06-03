@@ -1,0 +1,84 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  server-tests:
+    name: Server tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run server tests
+        run: npm test
+
+  go-tests-macos:
+    name: Go tests macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install native deps
+        run: brew install opus pkg-config
+
+      - name: Run Go tests
+        run: go test ./...
+
+  windows-amd64:
+    name: Windows amd64 artifact
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-opus
+
+      - name: Build Windows binaries
+        shell: pwsh
+        run: .\scripts\build-windows.ps1
+
+      - name: Package Windows artifact
+        shell: pwsh
+        run: Compress-Archive -Path .\dist\windows-amd64\* -DestinationPath .\dist\lylatlink-windows-amd64.zip -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lylatlink-windows-amd64
+          path: dist/lylatlink-windows-amd64.zip
+          if-no-files-found: error

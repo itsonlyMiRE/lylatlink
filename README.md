@@ -112,6 +112,8 @@ Build Windows release binaries from PowerShell on a Windows machine:
 
 The script writes `dist\windows-amd64\lylatlink.exe` for default no-console tray use, `dist\windows-amd64\lylatlink-console.exe` for foreground diagnostics, `dist\windows-amd64\Start-LylatLink-Tray.cmd` to launch tray mode, and the needed Opus/mingw runtime DLLs beside the executables. The no-console app can also attach/open a console for diagnostic flags such as `-console`, `-list-audio-devices`, and `-audio-device-test`.
 
+GitHub Actions also builds a Windows artifact. Run the `Build` workflow from the Actions tab, then download `lylatlink-windows-amd64` from the workflow run artifacts.
+
 To test WebRTC pairing locally, run the signaling server and two clients with `auto_join=true`, then copy the same replay into both watched directories. Successful output includes:
 
 ```text
