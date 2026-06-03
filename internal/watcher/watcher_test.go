@@ -146,6 +146,51 @@ func TestRunSkipsStaleReplayOnStartup(t *testing.T) {
 	}
 }
 
+func TestRunEmitsStartForNewReplayAfterStartup(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "Game.slp")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	w := New(root)
+	w.Debounce = time.Millisecond
+	w.StableThreshold = time.Hour
+	events := make(chan MatchEvent, 4)
+	errs := make(chan error, 1)
+	go func() {
+		errs <- w.Run(ctx, events)
+	}()
+
+	select {
+	case event := <-events:
+		t.Fatalf("unexpected startup event before replay exists: %s", event.Type)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	if err := os.WriteFile(path, syntheticSLPWithoutGameEnd(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	event := nextEvent(t, events)
+	if event.Type != EventMatchStart {
+		t.Fatalf("event = %s, want %s", event.Type, EventMatchStart)
+	}
+	if event.Path != path {
+		t.Fatalf("path = %s, want %s", event.Path, path)
+	}
+
+	cancel()
+	select {
+	case err := <-errs:
+		if err != nil {
+			t.Fatalf("watcher returned error: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for watcher shutdown")
+	}
+}
+
 func nextEvent(t *testing.T, events <-chan MatchEvent) MatchEvent {
 	t.Helper()
 	select {
