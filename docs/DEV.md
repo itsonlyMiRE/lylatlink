@@ -34,6 +34,7 @@ TODO:
 
 - Global end-call hotkey.
 - GitHub Release publishing.
+- More precise platform-specific run instructions.
 - UI controls for audio tuning - input/output gain levels, noise gate threshold
 - In-game overlay: show connection status (red Disconnected / green Connected, plus player codes), input/output/noise gate levels, togglable with configurable scale/position/transparency
 - Launch-with-Slippi helper shortcut
