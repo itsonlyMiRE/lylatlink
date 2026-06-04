@@ -13,7 +13,7 @@ Core details:
 - **ZERO setup required** - just run the app and verify the auto-detected .slp folder is where your new .slp files get created
 - **Simple UI** - little menu in your system tray + an info and status overlay in-game [overlay WIP] 
 - **No login**, just parses new .slp files and matches players accordingly
-- **End Call** menu button and hotkey: quickly terminate calls with toxic players [hotkey WIP]
+- **End Call** menu button and F8 hotkey: quickly terminate calls with toxic players
 - **Player IP protection** - audio is P2P but routed through a relay server
 - Absolutely **zero server-side capture or analysis of audio**, nothing is stored, the server is purely a relay to protect player IPs
 - Cost is out of my pocket but cheap :,)

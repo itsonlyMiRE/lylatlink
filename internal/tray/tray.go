@@ -246,6 +246,7 @@ func (m *menu) applyAutoJoin(enabled bool) {
 }
 
 func (m *menu) applyEndCall(status app.Status) {
+	m.endCall.SetTitle(endCallTitle(status.EndCallHotkey))
 	switch status.State {
 	case app.StateInVoice, app.StateWaiting:
 		m.endCall.Enable()
@@ -449,5 +450,49 @@ func replayTitle(path string) string {
 	if path == "" {
 		return "Replay Folder: unset"
 	}
-	return "Replay Folder: " + filepath.Base(path)
+	return "Replay Folder: " + compactPath(path, 58)
+}
+
+func endCallTitle(hotkey string) string {
+	hotkey = strings.TrimSpace(hotkey)
+	if hotkey == "" {
+		return "End Call"
+	}
+	return "End Call (" + strings.ToUpper(hotkey) + ")"
+}
+
+func compactPath(path string, maxLen int) string {
+	path = strings.TrimSpace(path)
+	if len(path) <= maxLen {
+		return path
+	}
+
+	base, separator := pathBase(path)
+
+	const ellipsis = "..."
+	if base == "" || len(base)+len(ellipsis)+1 >= maxLen {
+		return strings.TrimSpace(path[:maxLen-len(ellipsis)]) + ellipsis
+	}
+
+	prefixLen := maxLen - len(base) - len(ellipsis) - 1
+	if prefixLen < 1 {
+		prefixLen = 1
+	}
+	return strings.TrimRight(path[:prefixLen], `/\`) + ellipsis + separator + base
+}
+
+func pathBase(path string) (string, string) {
+	trimmed := strings.TrimRight(path, `/\`)
+	lastSlash := strings.LastIndex(trimmed, "/")
+	lastBackslash := strings.LastIndex(trimmed, `\`)
+	lastSeparator := lastSlash
+	separator := "/"
+	if lastBackslash > lastSlash {
+		lastSeparator = lastBackslash
+		separator = `\`
+	}
+	if lastSeparator == -1 {
+		return filepath.Base(trimmed), separator
+	}
+	return trimmed[lastSeparator+1:], separator
 }

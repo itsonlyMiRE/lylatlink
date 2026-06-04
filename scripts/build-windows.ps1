@@ -169,9 +169,11 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 
 $appExe = Join-Path $out "lylatlink.exe"
 $consoleExe = Join-Path $out "lylatlink-console.exe"
+$dolphinLauncherExe = Join-Path $out "Slippi Dolphin with LylatLink.exe"
 $iconPath = Join-Path $RepoRoot "assets\icon.ico"
 $resourceRc = Join-Path ([System.IO.Path]::GetTempPath()) "lylatlink-icon.rc"
-$resourceSyso = Join-Path $RepoRoot "cmd\lylatlink\lylatlink.syso"
+$appResourceSyso = Join-Path $RepoRoot "cmd\lylatlink\lylatlink.syso"
+$launcherResourceSyso = Join-Path $RepoRoot "cmd\lylatlink-dolphin\lylatlink.syso"
 
 if (-not (Test-Path $iconPath)) {
     throw "Windows icon was not found at $iconPath"
@@ -180,10 +182,11 @@ $iconPathForRc = $iconPath.Replace("\", "/")
 
 try {
     Set-Content -Path $resourceRc -Encoding ASCII -Value "1 ICON `"$iconPathForRc`""
-    & $windresExe -O coff -F pe-x86-64 -i $resourceRc -o $resourceSyso
+    & $windresExe -O coff -F pe-x86-64 -i $resourceRc -o $appResourceSyso
     if ($LASTEXITCODE -ne 0) {
         throw "windres failed"
     }
+    Copy-Item -Force $appResourceSyso $launcherResourceSyso
 
     & go build -trimpath -ldflags "-s -w" -o $consoleExe ./cmd/lylatlink
     if ($LASTEXITCODE -ne 0) {
@@ -194,9 +197,14 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "app build failed"
     }
+
+    & go build -trimpath -ldflags "-s -w -H=windowsgui" -o $dolphinLauncherExe ./cmd/lylatlink-dolphin
+    if ($LASTEXITCODE -ne 0) {
+        throw "dolphin launcher build failed"
+    }
 }
 finally {
-    Remove-Item -Force -ErrorAction SilentlyContinue $resourceRc, $resourceSyso
+    Remove-Item -Force -ErrorAction SilentlyContinue $resourceRc, $appResourceSyso, $launcherResourceSyso
 }
 
 foreach ($dll in @("libopus-0.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll")) {
@@ -209,3 +217,4 @@ foreach ($dll in @("libopus-0.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll")
 Write-Host "Built:"
 Write-Host "  $appExe"
 Write-Host "  $consoleExe"
+Write-Host "  $dolphinLauncherExe"

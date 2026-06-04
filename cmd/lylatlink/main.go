@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"lylatlink/internal/audio"
 	"lylatlink/internal/config"
 	"lylatlink/internal/console"
+	"lylatlink/internal/hotkey"
 	"lylatlink/internal/tray"
 )
 
@@ -172,6 +174,7 @@ func main() {
 		trayCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		controller := app.NewController(cfg, resolvedConfigPath, opts)
+		startEndCallHotkey(trayCtx, cfg.EndCallHotkey, controller)
 		errs := make(chan error, 1)
 		go func() {
 			errs <- controller.Run(trayCtx)
@@ -184,9 +187,26 @@ func main() {
 		return
 	}
 
-	if err := app.Run(ctx, cfg, opts); err != nil {
+	controller := app.NewController(cfg, resolvedConfigPath, opts)
+	startEndCallHotkey(ctx, cfg.EndCallHotkey, controller)
+	if err := controller.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func startEndCallHotkey(ctx context.Context, key string, controller *app.Controller) {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return
+	}
+	if err := hotkey.Start(ctx, key, func() {
+		log.Printf("global end-call hotkey detected: %s", key)
+		controller.EndCall()
+	}); err != nil {
+		log.Printf("global end-call hotkey unavailable (%s): %v", key, err)
+		return
+	}
+	log.Printf("global end-call hotkey registered: %s", key)
 }
 
 func flagWasSet(name string) bool {

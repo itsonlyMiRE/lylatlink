@@ -23,20 +23,19 @@ Implemented:
 - It decodes incoming Opus/PCMU audio and plays it through the selected/default speaker or headphones.
 - It plays an embedded connection chime through the selected/default output device before remote voice playback starts.
 - It has a system tray mode with app icon, status, match label, auto-join toggle, end call, input/output device choosers, replay folder picker, config-file opener, codec/playback display, input/output/noise gate readouts, and quit.
+- It registers a global end-call hotkey (`F8` by default) on macOS and Windows, logs every detected press, and routes it through the same end-call path as the tray button.
 - The Node signaling server exposes `POST /match/start`, `POST /match/end`, and `WSS /signal`.
 - The signaling server issues coturn-compatible TURN credentials with an 8-minute default TTL, rate-limits each source IP, and prevents unrelated nonces from ending pending matches.
 - Terraform infra can run the signaling server and coturn on one EC2-backed ECS host.
 - Terraform infra builds/pushes local Podman images, keeps the latest three ECR images per repo, and can use either Route 53 or externally managed DNS.
 - GitHub Actions builds server tests, Go tests, unsigned macOS app artifacts, and Windows portable artifacts when app/server/build inputs change.
 - Local packaging scripts build an unsigned macOS `.app` bundle and Windows portable binaries with embedded app icons.
+- Windows release packages include `Slippi Dolphin with LylatLink.exe`, a launch-together helper that starts LylatLink and then opens Slippi Launcher's netplay Dolphin install.
 
 TODO:
 
-- Global end-call hotkey.
 - GitHub Release publishing.
-- UI controls for audio tuning - input/output gain levels, noise gate threshold
-- Desktop overlay: show red/green connection status and player codes. Works best in windowed/borderless Slippi; exclusive fullscreen may cover it. Include locked click-through status mode plus edit mode with sliders for input gain, output gain, and noise gate threshold, with buttons to lock/unlock UI.
-- Launch-with-Slippi helper shortcut
+- Desktop overlay UI: show red/green connection status and player codes. Works best in windowed/borderless Slippi; exclusive fullscreen may cover it. Include locked click-through status mode plus edit mode with sliders for input gain, output gain, and noise gate threshold, with buttons to lock/unlock UI.
 - 4 player support
 - Intel Mac + Linux
 
@@ -141,13 +140,13 @@ Build Windows release binaries from PowerShell on a Windows machine:
 .\scripts\build-windows.ps1
 ```
 
-The script writes `dist\windows-amd64\lylatlink.exe` for default no-console tray use, `dist\windows-amd64\lylatlink-console.exe` for foreground diagnostics, and the needed Opus/mingw runtime DLLs beside the executables. The no-console app can also attach/open a console for diagnostic flags such as `-console`, `-list-audio-devices`, and `-audio-device-test`.
+The script writes `dist\windows-amd64\lylatlink.exe` for default no-console tray use, `dist\windows-amd64\lylatlink-console.exe` for foreground diagnostics, `dist\windows-amd64\Slippi Dolphin with LylatLink.exe` for launching both apps together, and the needed Opus/mingw runtime DLLs beside the executables. The no-console app can also attach/open a console for diagnostic flags such as `-console`, `-list-audio-devices`, and `-audio-device-test`.
 
 GitHub Actions also builds macOS and Windows artifacts. Run the `Build` workflow from the Actions tab, then download `lylatlink-macos` or `lylatlink-windows-amd64` from the workflow run artifacts.
 
 No Windows installer is planned for the normal release path. The app is intended to run as a portable tray executable, with settings stored in AppData rather than beside the executable. An installer would only be useful later for optional conveniences such as Start Menu shortcuts, auto-update wiring, or a bundled Slippi launcher shortcut.
 
-The Windows portable zip should contain `lylatlink.exe`, `lylatlink-console.exe`, and the required DLLs. User config persists separately under `%APPDATA%\lylatlink\config.toml`.
+The Windows portable zip should contain `lylatlink.exe`, `lylatlink-console.exe`, `Slippi Dolphin with LylatLink.exe`, and the required DLLs. User config persists separately under `%APPDATA%\lylatlink\config.toml`.
 
 To test WebRTC pairing locally, run the signaling server and two clients with `auto_join=true`, then copy the same replay into both watched directories. Successful output includes:
 

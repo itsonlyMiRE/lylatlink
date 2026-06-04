@@ -48,6 +48,7 @@ type Status struct {
 	OutputGainDB   float64
 	NoiseGateDB    float64
 	NoPlayback     bool
+	EndCallHotkey  string
 	MatchID        string
 	MatchLabel     string
 	Message        string
@@ -480,6 +481,7 @@ func (c *Controller) status(state State, matchID string, label string, message s
 		OutputGainDB:   cfg.OutputGainDB,
 		NoiseGateDB:    cfg.NoiseGateDB,
 		NoPlayback:     c.opts.NoPlayback,
+		EndCallHotkey:  cfg.EndCallHotkey,
 		MatchID:        matchID,
 		MatchLabel:     label,
 		Message:        message,
