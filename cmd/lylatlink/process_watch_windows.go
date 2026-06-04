@@ -38,3 +38,7 @@ func watchExitProcess(ctx context.Context, cancel context.CancelFunc, pid int) {
 		}
 	}()
 }
+
+func watchExitProcessName(ctx context.Context, cancel context.CancelFunc, name string) {
+	log.Printf("process-name exit watch is not supported on Windows; name=%q", name)
+}

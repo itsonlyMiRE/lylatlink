@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"os/exec"
 	"syscall"
 	"time"
 )
@@ -44,4 +45,37 @@ func processRunning(pid int) bool {
 		return true
 	}
 	return false
+}
+
+func watchExitProcessName(ctx context.Context, cancel context.CancelFunc, name string) {
+	log.Printf("will exit when process exits: name=%q", name)
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		seen := false
+		startupDeadline := time.Now().Add(30 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				running := processNameRunning(name)
+				if running {
+					seen = true
+					continue
+				}
+				if !seen && time.Now().Before(startupDeadline) {
+					continue
+				}
+				log.Printf("watched process exited; shutting down: name=%q", name)
+				cancel()
+				return
+			}
+		}
+	}()
+}
+
+func processNameRunning(name string) bool {
+	return exec.Command("pgrep", "-x", name).Run() == nil
 }

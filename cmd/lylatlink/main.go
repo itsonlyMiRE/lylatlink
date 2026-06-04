@@ -42,6 +42,7 @@ func main() {
 		noPlayback        = flag.Bool("no-playback", false, "disable remote speaker playback")
 		ignoreMatchEnd    = flag.Bool("ignore-match-end", false, "test mode: keep voice open when copied replays contain Game End")
 		exitWhenPID       = flag.Int("exit-when-pid", 0, "exit when the given process ID is no longer running")
+		exitWhenProcess   = flag.String("exit-when-process-name", "", "exit when the named process is no longer running")
 		trayMode          = flag.Bool("tray", true, "run with system tray menu")
 		consoleMode       = flag.Bool("console", false, "run in the foreground without the system tray")
 	)
@@ -60,6 +61,9 @@ func main() {
 	defer cancel()
 	if *exitWhenPID > 0 {
 		watchExitProcess(ctx, cancel, *exitWhenPID)
+	}
+	if *exitWhenProcess != "" {
+		watchExitProcessName(ctx, cancel, *exitWhenProcess)
 	}
 
 	if *once != "" {

@@ -10,6 +10,17 @@ import (
 	"strings"
 )
 
+type launchTarget struct {
+	Path        string
+	AppBundle   bool
+	ProcessName string
+}
+
+type launchWatch struct {
+	PID         int
+	ProcessName string
+}
+
 func main() {
 	if err := run(); err != nil {
 		notify("LylatLink", err.Error())
@@ -28,18 +39,18 @@ func run() error {
 		return err
 	}
 
-	dolphinPath, err := findNetplayDolphin()
+	dolphin, err := findNetplayDolphin()
 	if err != nil {
 		return err
 	}
 
-	dolphinCmd, err := startDetached(dolphinPath)
+	watch, err := startDetached(dolphin)
 	if err != nil {
 		return fmt.Errorf("start Slippi Dolphin: %w", err)
 	}
 
 	if !lylatlinkAlreadyRunning() {
-		if _, err := startLylatLink(lylatPath, dolphinCmd.Process.Pid); err != nil {
+		if _, err := startLylatLink(lylatPath, watch); err != nil {
 			return fmt.Errorf("start LylatLink: %w", err)
 		}
 	}
@@ -58,8 +69,10 @@ func executableDir() (string, error) {
 func lylatlinkPath(launcherDir string) (string, error) {
 	appBundleRoot := filepath.Clean(filepath.Join(launcherDir, "..", "..", ".."))
 	candidates := []string{
+		filepath.Join(launcherDir, "..", "Resources", "LylatLink.app"),
 		filepath.Join(launcherDir, "lylatlink.exe"),
 		filepath.Join(launcherDir, "LylatLink.app"),
+		filepath.Join(appBundleRoot, "..", "LylatLink.app"),
 		filepath.Join(appBundleRoot, "LylatLink.app"),
 	}
 	for _, candidate := range candidates {
@@ -70,20 +83,20 @@ func lylatlinkPath(launcherDir string) (string, error) {
 	return "", errors.New("could not find LylatLink next to this launcher")
 }
 
-func findNetplayDolphin() (string, error) {
+func findNetplayDolphin() (launchTarget, error) {
 	roots, err := slippiNetplayRoots()
 	if err != nil {
-		return "", err
+		return launchTarget{}, err
 	}
 
 	for _, root := range roots {
-		path, ok := findDolphinInRoot(root)
+		target, ok := findDolphinInRoot(root)
 		if ok {
-			return path, nil
+			return target, nil
 		}
 	}
 
-	return "", fmt.Errorf("could not find Slippi netplay Dolphin under:\n\n%s\n\nOpen Slippi Launcher once and use Netplay > Configure Dolphin, then try this launcher again.", strings.Join(roots, "\n"))
+	return launchTarget{}, fmt.Errorf("could not find Slippi netplay Dolphin under:\n\n%s\n\nOpen Slippi Launcher once and use Netplay > Configure Dolphin, then try this launcher again.", strings.Join(roots, "\n"))
 }
 
 func slippiNetplayRoots() ([]string, error) {
@@ -113,20 +126,20 @@ func slippiNetplayRootsFrom(base string) []string {
 	}
 }
 
-func findDolphinInRoot(root string) (string, bool) {
+func findDolphinInRoot(root string) (launchTarget, bool) {
 	entries, err := os.ReadDir(root)
 	if err != nil {
-		return "", false
+		return launchTarget{}, false
 	}
 
 	for _, entry := range entries {
 		path := filepath.Join(root, entry.Name())
-		if dolphinPath, ok := dolphinExecutablePath(path, entry.IsDir()); ok {
-			return dolphinPath, true
+		if target, ok := dolphinLaunchTarget(path, entry.IsDir()); ok {
+			return target, true
 		}
 	}
 
-	var found string
+	var found launchTarget
 	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || path == root {
 			return nil
@@ -137,49 +150,51 @@ func findDolphinInRoot(root string) (string, bool) {
 			}
 			return nil
 		}
-		if dolphinPath, ok := dolphinExecutablePath(path, d.IsDir()); ok {
-			found = dolphinPath
+		if target, ok := dolphinLaunchTarget(path, d.IsDir()); ok {
+			found = target
 			return filepath.SkipAll
 		}
 		return nil
 	})
-	return found, found != ""
+	return found, found.Path != ""
 }
 
-func dolphinExecutablePath(path string, isDir bool) (string, bool) {
+func dolphinLaunchTarget(path string, isDir bool) (launchTarget, bool) {
 	name := filepath.Base(path)
 	switch runtime.GOOS {
 	case "windows":
 		if !isDir && strings.HasSuffix(strings.ToLower(name), "dolphin.exe") {
-			return path, true
+			return launchTarget{Path: path}, true
 		}
 	case "darwin":
 		if isDir && strings.HasSuffix(name, "Dolphin.app") {
-			return dolphinBinaryInApp(path)
+			if processName, ok := dolphinProcessNameInApp(path); ok {
+				return launchTarget{Path: path, AppBundle: true, ProcessName: processName}, true
+			}
 		}
 	}
-	return "", false
+	return launchTarget{}, false
 }
 
-func dolphinBinaryInApp(appPath string) (string, bool) {
+func dolphinProcessNameInApp(appPath string) (string, bool) {
 	candidates := []string{
-		filepath.Join(appPath, "Contents", "MacOS", "Slippi_Dolphin"),
-		filepath.Join(appPath, "Contents", "MacOS", "Slippi Dolphin"),
+		"Slippi_Dolphin",
+		"Slippi Dolphin",
 	}
+	macosDir := filepath.Join(appPath, "Contents", "MacOS")
 	for _, candidate := range candidates {
-		if exists(candidate) {
+		if exists(filepath.Join(macosDir, candidate)) {
 			return candidate, true
 		}
 	}
 
-	macosDir := filepath.Join(appPath, "Contents", "MacOS")
 	entries, err := os.ReadDir(macosDir)
 	if err != nil {
 		return "", false
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() {
-			return filepath.Join(macosDir, entry.Name()), true
+			return entry.Name(), true
 		}
 	}
 	return "", false
@@ -203,18 +218,38 @@ func lylatlinkAlreadyRunning() bool {
 	}
 }
 
-func startLylatLink(path string, dolphinPID int) (*exec.Cmd, error) {
+func startLylatLink(path string, watch launchWatch) (*exec.Cmd, error) {
+	args := watchArgs(watch)
 	if runtime.GOOS == "darwin" && strings.HasSuffix(path, ".app") {
-		cmd := exec.Command("open", path, "--args", "-exit-when-pid", fmt.Sprintf("%d", dolphinPID))
+		openArgs := append([]string{path, "--args"}, args...)
+		cmd := exec.Command("open", openArgs...)
 		return cmd, cmd.Start()
 	}
-	cmd := exec.Command(path, "-exit-when-pid", fmt.Sprintf("%d", dolphinPID))
+	cmd := exec.Command(path, args...)
 	cmd.Dir = filepath.Dir(path)
 	return cmd, cmd.Start()
 }
 
-func startDetached(path string) (*exec.Cmd, error) {
-	cmd := exec.Command(path)
-	cmd.Dir = filepath.Dir(path)
-	return cmd, cmd.Start()
+func watchArgs(watch launchWatch) []string {
+	if watch.ProcessName != "" {
+		return []string{"-exit-when-process-name", watch.ProcessName}
+	}
+	return []string{"-exit-when-pid", fmt.Sprintf("%d", watch.PID)}
+}
+
+func startDetached(target launchTarget) (launchWatch, error) {
+	if runtime.GOOS == "darwin" && target.AppBundle {
+		cmd := exec.Command("open", "-W", target.Path)
+		if err := cmd.Start(); err != nil {
+			return launchWatch{}, err
+		}
+		return launchWatch{PID: cmd.Process.Pid}, nil
+	}
+
+	cmd := exec.Command(target.Path)
+	cmd.Dir = filepath.Dir(target.Path)
+	if err := cmd.Start(); err != nil {
+		return launchWatch{}, err
+	}
+	return launchWatch{PID: cmd.Process.Pid}, nil
 }
