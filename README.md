@@ -33,7 +33,7 @@ Core details:
     - Windows: Unzip, run **`Slippi Dolphin with LylatLink.exe`**. The zip also includes `lylatlink.exe` if you only want the standalone tray app.
     - Mac: Unzip, move the apps into your `Applications` folder, then run **`Slippi Dolphin with LylatLink.app`**. The zip also includes `LylatLink.app` if you only want the standalone tray app.
 
-      NOTE: I have no interest in paying $99/yr to Apple so you will probably get a security warning when running for the first time. [Click here for the steps to remediate this and trust the app.](docs/apple-security-fix.md)
+      NOTE: I have no interest in paying $99/yr to Apple so you will probably get a security warning when running for the first time. [Click here for the steps to remediate this and trust the app.](docs/apple-security-fix.md), you may have to do this first for the LylatLink app, then the launcher app.
 3. Play! By default, a chime will play when a call starts with your opponent.
 
 **The launch-together app starts LylatLink and your existing Slippi Dolphin app together, and closes LylatLink when you close Dolphin.** If your opponent also has LylatLink, voice connects automatically. If not, nothing changes; LylatLink waits quietly and closes when Dolphin closes. On first connection, your OS/firewall may ask to allow network access. Allow it.
