@@ -41,6 +41,7 @@ func main() {
 		syntheticAudio    = flag.Bool("synthetic-audio", false, "send synthetic PCMU audio instead of live microphone audio")
 		noPlayback        = flag.Bool("no-playback", false, "disable remote speaker playback")
 		ignoreMatchEnd    = flag.Bool("ignore-match-end", false, "test mode: keep voice open when copied replays contain Game End")
+		exitWhenPID       = flag.Int("exit-when-pid", 0, "exit when the given process ID is no longer running")
 		trayMode          = flag.Bool("tray", true, "run with system tray menu")
 		consoleMode       = flag.Bool("console", false, "run in the foreground without the system tray")
 	)
@@ -53,8 +54,13 @@ func main() {
 		}
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	signalCtx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+	ctx, cancel := context.WithCancel(signalCtx)
+	defer cancel()
+	if *exitWhenPID > 0 {
+		watchExitProcess(ctx, cancel, *exitWhenPID)
+	}
 
 	if *once != "" {
 		if err := app.ParseOnce(os.Stdout, *once); err != nil {

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 )
 
 func main() {
@@ -34,16 +33,17 @@ func run() error {
 		return err
 	}
 
+	dolphinCmd, err := startDetached(dolphinPath)
+	if err != nil {
+		return fmt.Errorf("start Slippi Dolphin: %w", err)
+	}
+
 	if !lylatlinkAlreadyRunning() {
-		if err := startDetached(lylatPath); err != nil {
+		if _, err := startLylatLink(lylatPath, dolphinCmd.Process.Pid); err != nil {
 			return fmt.Errorf("start LylatLink: %w", err)
 		}
 	}
 
-	time.Sleep(500 * time.Millisecond)
-	if err := startDetached(dolphinPath); err != nil {
-		return fmt.Errorf("start Slippi Dolphin: %w", err)
-	}
 	return nil
 }
 
@@ -56,9 +56,11 @@ func executableDir() (string, error) {
 }
 
 func lylatlinkPath(launcherDir string) (string, error) {
+	appBundleRoot := filepath.Clean(filepath.Join(launcherDir, "..", "..", ".."))
 	candidates := []string{
 		filepath.Join(launcherDir, "lylatlink.exe"),
 		filepath.Join(launcherDir, "LylatLink.app"),
+		filepath.Join(appBundleRoot, "LylatLink.app"),
 	}
 	for _, candidate := range candidates {
 		if exists(candidate) {
@@ -119,8 +121,8 @@ func findDolphinInRoot(root string) (string, bool) {
 
 	for _, entry := range entries {
 		path := filepath.Join(root, entry.Name())
-		if isDolphinExecutable(path, entry.IsDir()) {
-			return path, true
+		if dolphinPath, ok := dolphinExecutablePath(path, entry.IsDir()); ok {
+			return dolphinPath, true
 		}
 	}
 
@@ -135,8 +137,8 @@ func findDolphinInRoot(root string) (string, bool) {
 			}
 			return nil
 		}
-		if isDolphinExecutable(path, d.IsDir()) {
-			found = path
+		if dolphinPath, ok := dolphinExecutablePath(path, d.IsDir()); ok {
+			found = dolphinPath
 			return filepath.SkipAll
 		}
 		return nil
@@ -144,16 +146,43 @@ func findDolphinInRoot(root string) (string, bool) {
 	return found, found != ""
 }
 
-func isDolphinExecutable(path string, isDir bool) bool {
+func dolphinExecutablePath(path string, isDir bool) (string, bool) {
 	name := filepath.Base(path)
 	switch runtime.GOOS {
 	case "windows":
-		return !isDir && strings.HasSuffix(strings.ToLower(name), "dolphin.exe")
+		if !isDir && strings.HasSuffix(strings.ToLower(name), "dolphin.exe") {
+			return path, true
+		}
 	case "darwin":
-		return isDir && strings.HasSuffix(name, "Dolphin.app")
-	default:
-		return false
+		if isDir && strings.HasSuffix(name, "Dolphin.app") {
+			return dolphinBinaryInApp(path)
+		}
 	}
+	return "", false
+}
+
+func dolphinBinaryInApp(appPath string) (string, bool) {
+	candidates := []string{
+		filepath.Join(appPath, "Contents", "MacOS", "Slippi_Dolphin"),
+		filepath.Join(appPath, "Contents", "MacOS", "Slippi Dolphin"),
+	}
+	for _, candidate := range candidates {
+		if exists(candidate) {
+			return candidate, true
+		}
+	}
+
+	macosDir := filepath.Join(appPath, "Contents", "MacOS")
+	entries, err := os.ReadDir(macosDir)
+	if err != nil {
+		return "", false
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			return filepath.Join(macosDir, entry.Name()), true
+		}
+	}
+	return "", false
 }
 
 func exists(path string) bool {
@@ -162,18 +191,30 @@ func exists(path string) bool {
 }
 
 func lylatlinkAlreadyRunning() bool {
-	if runtime.GOOS != "windows" {
+	switch runtime.GOOS {
+	case "windows":
+		out, err := exec.Command("tasklist", "/FI", "IMAGENAME eq lylatlink.exe").Output()
+		return err == nil && strings.Contains(strings.ToLower(string(out)), "lylatlink.exe")
+	case "darwin":
+		err := exec.Command("pgrep", "-x", "LylatLink").Run()
+		return err == nil
+	default:
 		return false
 	}
-	out, err := exec.Command("tasklist", "/FI", "IMAGENAME eq lylatlink.exe").Output()
-	return err == nil && strings.Contains(strings.ToLower(string(out)), "lylatlink.exe")
 }
 
-func startDetached(path string) error {
+func startLylatLink(path string, dolphinPID int) (*exec.Cmd, error) {
 	if runtime.GOOS == "darwin" && strings.HasSuffix(path, ".app") {
-		return exec.Command("open", path).Start()
+		cmd := exec.Command("open", path, "--args", "-exit-when-pid", fmt.Sprintf("%d", dolphinPID))
+		return cmd, cmd.Start()
 	}
+	cmd := exec.Command(path, "-exit-when-pid", fmt.Sprintf("%d", dolphinPID))
+	cmd.Dir = filepath.Dir(path)
+	return cmd, cmd.Start()
+}
+
+func startDetached(path string) (*exec.Cmd, error) {
 	cmd := exec.Command(path)
 	cmd.Dir = filepath.Dir(path)
-	return cmd.Start()
+	return cmd, cmd.Start()
 }

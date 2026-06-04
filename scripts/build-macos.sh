@@ -81,16 +81,26 @@ MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 FRAMEWORKS="$CONTENTS/Frameworks"
 BIN="$MACOS/LylatLink"
+HELPER_APP="$OUT/Slippi Dolphin with LylatLink.app"
+HELPER_CONTENTS="$HELPER_APP/Contents"
+HELPER_MACOS="$HELPER_CONTENTS/MacOS"
+HELPER_RESOURCES="$HELPER_CONTENTS/Resources"
+HELPER_BIN="$HELPER_MACOS/Slippi Dolphin with LylatLink"
 ZIP="$ROOT/dist/lylatlink-macos-$ARCH.zip"
+ZIP_ROOT="$OUT/LylatLink-macos-$ARCH"
 
-rm -rf "$APP" "$ZIP"
-mkdir -p "$MACOS" "$RESOURCES" "$FRAMEWORKS" "$ROOT/dist"
+rm -rf "$APP" "$HELPER_APP" "$ZIP" "$ZIP_ROOT"
+mkdir -p "$MACOS" "$RESOURCES" "$FRAMEWORKS" "$HELPER_MACOS" "$HELPER_RESOURCES" "$ROOT/dist"
 
 cp packaging/macos/Info.plist "$CONTENTS/Info.plist"
 cp assets/icon.icns "$RESOURCES/AppIcon.icns"
+cp packaging/macos/LauncherInfo.plist "$HELPER_CONTENTS/Info.plist"
+cp assets/icon.icns "$HELPER_RESOURCES/AppIcon.icns"
 
 CGO_ENABLED=1 go build -trimpath -ldflags "-s -w" -o "$BIN" ./cmd/lylatlink
 chmod +x "$BIN"
+CGO_ENABLED=1 go build -trimpath -ldflags "-s -w" -o "$HELPER_BIN" ./cmd/lylatlink-dolphin
+chmod +x "$HELPER_BIN"
 
 OPUS_DYLIB="$(otool -L "$BIN" | awk '/libopus.*\.dylib/ {print $1; exit}')"
 if [[ -z "$OPUS_DYLIB" ]]; then
@@ -108,9 +118,17 @@ fi
 
 codesign --force --deep --sign - --entitlements packaging/macos/entitlements.plist "$APP"
 codesign --verify --deep --strict "$APP"
+codesign --force --deep --sign - "$HELPER_APP"
+codesign --verify --deep --strict "$HELPER_APP"
 
-ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+mkdir -p "$ZIP_ROOT"
+ditto "$APP" "$ZIP_ROOT/LylatLink.app"
+ditto "$HELPER_APP" "$ZIP_ROOT/Slippi Dolphin with LylatLink.app"
+
+ditto -c -k --sequesterRsrc --keepParent "$ZIP_ROOT" "$ZIP"
 
 echo "Built:"
 echo "  $APP"
+echo "  $HELPER_APP"
+echo "  $ZIP_ROOT"
 echo "  $ZIP"

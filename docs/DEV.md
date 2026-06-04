@@ -30,7 +30,7 @@ Implemented:
 - Terraform infra builds/pushes local Podman images, keeps the latest three ECR images per repo, and can use either Route 53 or externally managed DNS.
 - GitHub Actions builds server tests, Go tests, unsigned macOS app artifacts, and Windows portable artifacts when app/server/build inputs change.
 - Local packaging scripts build an unsigned macOS `.app` bundle and Windows portable binaries with embedded app icons.
-- Windows release packages include `Slippi Dolphin with LylatLink.exe`, a launch-together helper that starts LylatLink and then opens Slippi Launcher's netplay Dolphin install.
+- Release packages include `Slippi Dolphin with LylatLink.exe` on Windows and `Slippi Dolphin with LylatLink.app` on macOS. The helper starts LylatLink with a Dolphin-process watcher, opens Slippi Launcher's netplay Dolphin install, and LylatLink exits when that Dolphin process closes.
 
 TODO:
 
