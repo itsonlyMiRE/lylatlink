@@ -8,7 +8,7 @@
 LylatLink is a small open-source companion app for Slippi that adds voice chat with opponents. It is designed with simplicity in mind - run the launcher app, play Slippi, and a voice call will start automatically when both players in a match are using LylatLink. **No setup required.**
 
 Core details:
-- **Tiny <20MB executable size** - built fully in Go; no Electron nonsense
+- **Tiny <20MB executable size** - built fully in Go; no large resource-hungry Electron app
 - **Neglible resource consumption** - <50MB memory
 - **Fully open source**
 - **ZERO setup required** in most cases - use the launch-together app and play normally
@@ -39,6 +39,8 @@ Core details:
 **The launch-together app starts LylatLink and your existing Slippi Dolphin app together, and closes LylatLink when you close Dolphin.** If your opponent also has LylatLink, voice connects automatically. If not, nothing changes; LylatLink waits quietly and closes when Dolphin closes. On first connection, your OS/firewall may ask to allow network access. Allow it.
 
 To use LylatLink, Slippi must be configured to save .slp replays. LylatLink will try to find your Slippi Dolphin install and replay folder automatically using your Slippi Launcher and Dolphin settings. If it does not, open the tray menu, choose **Replay Folder**, and select the folder that stores your .slp replays. ***Note:** If you organize replays into monthly subfolders, choose the parent folder; i.e., if they save to [path]/Slippi/2026-06, select the 'Slippi' folder.*
+
+For auto-detecting your .slp replay folder, the app checks Slippi Launcher's saved settings first, then the known Slippi Dolphin `Dolphin.ini` locations, then the default `Slippi` folder for your OS. The launch-together app looks for Slippi Launcher's bundled netplay Dolphin install in the normal Slippi Launcher app-data folders. If you installed or moved things somewhere unusual, use the tray **Replay folder** picker or run the standalone `lylatlink` app.
 
 If this is not working for whatever reason, you can find the folder location in Slippi Launcher under Replay settings:
 
