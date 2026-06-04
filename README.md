@@ -26,6 +26,8 @@ Core details:
 - [macOS](https://github.com/itsonlyMiRE/lylatlink/releases/latest/download/lylatlink-macos-arm64.zip) (M1/M2/M3/M4 Apple Silicon)
 - Linux and Intel macOS are not currently supported.
 
+**See setup below before running.**
+
 ## Setup
 
 1. Download the latest release for your platform above.
