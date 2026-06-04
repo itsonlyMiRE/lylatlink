@@ -166,9 +166,9 @@ if (-not $SkipTests) {
 
 $out = Join-Path $RepoRoot $OutputDir
 New-Item -ItemType Directory -Force -Path $out | Out-Null
+Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $out "lylatlink-console.exe")
 
 $appExe = Join-Path $out "lylatlink.exe"
-$consoleExe = Join-Path $out "lylatlink-console.exe"
 $dolphinLauncherExe = Join-Path $out "Slippi Dolphin with LylatLink.exe"
 $iconPath = Join-Path $RepoRoot "assets\icon.ico"
 $resourceRc = Join-Path ([System.IO.Path]::GetTempPath()) "lylatlink-icon.rc"
@@ -187,11 +187,6 @@ try {
         throw "windres failed"
     }
     Copy-Item -Force $appResourceSyso $launcherResourceSyso
-
-    & go build -trimpath -ldflags "-s -w" -o $consoleExe ./cmd/lylatlink
-    if ($LASTEXITCODE -ne 0) {
-        throw "console build failed"
-    }
 
     & go build -trimpath -ldflags "-s -w -H=windowsgui" -o $appExe ./cmd/lylatlink
     if ($LASTEXITCODE -ne 0) {
@@ -216,5 +211,4 @@ foreach ($dll in @("libopus-0.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll")
 
 Write-Host "Built:"
 Write-Host "  $appExe"
-Write-Host "  $consoleExe"
 Write-Host "  $dolphinLauncherExe"

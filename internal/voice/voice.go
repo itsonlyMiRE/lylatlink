@@ -57,6 +57,7 @@ type Options struct {
 	InputGainDB       float64
 	OutputGainDB      float64
 	NoiseGateDB       float64
+	PlayChimes        bool
 	UseSyntheticAudio bool
 	DisablePlayback   bool
 	Verbose           bool
@@ -696,7 +697,9 @@ func (c *WebRTCController) drainRemoteTrack(ctx context.Context, matchID string,
 		} else {
 			defer playback.Stop()
 			c.markAudioPlayed(matchID)
-			playConnectionChime(ctx, matchID, playback, c.Options.Verbose)
+			if c.Options.PlayChimes {
+				playConnectionChime(ctx, matchID, playback, c.Options.Verbose)
+			}
 			if c.Options.Verbose {
 				log.Printf(
 					"remote audio playback started: %s device=%q sampleRate=%d channels=%d format=%s outputGain=%.1fdB",
@@ -776,7 +779,7 @@ func playConnectionChime(ctx context.Context, matchID string, playback *audio.Pl
 }
 
 func (c *WebRTCController) playEndChime(ctx context.Context, matchID string) {
-	if c.Options.DisablePlayback {
+	if c.Options.DisablePlayback || !c.Options.PlayChimes {
 		return
 	}
 	samples, err := endChimeSamplesPCM()

@@ -21,7 +21,7 @@ Implemented:
 - It sends live microphone frames through WebRTC as Opus by default, with PCMU as a fallback/test codec.
 - It applies configurable input gain, output gain, and microphone noise gate threshold during voice sessions.
 - It decodes incoming Opus/PCMU audio and plays it through the selected/default speaker or headphones.
-- It plays an embedded connection chime through the selected/default output device before remote voice playback starts.
+- It plays embedded connection/disconnection chimes through the selected/default output device, with a tray/config toggle to disable them.
 - It has a system tray mode with app icon, status, match label, auto-join toggle, end call, input/output device choosers, replay folder picker, config-file opener, codec/playback display, input/output/noise gate readouts, and quit.
 - It registers a configurable global end-call hotkey (`F8` by default) on macOS and Windows, exposes a tray picker for F8-F12/backtick/backslash/disabled, logs every detected press, and routes it through the same end-call path as the tray button.
 - The Node signaling server exposes `POST /match/start`, `POST /match/end`, and `WSS /signal`.
@@ -66,6 +66,7 @@ Create or edit the LylatLink config file. The default path is resolved through X
 ```toml
 replay_dir = "/Users/you/Documents/Slippi"
 auto_join = true
+play_chimes = true
 input_device_id = "" # optional; empty means system default microphone
 output_device_id = "" # optional; empty means system default speaker/headphones
 audio_codec = "opus" # opus or pcmu

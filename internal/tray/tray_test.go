@@ -39,7 +39,7 @@ func TestStatusTitleClipsLongWatchingMessage(t *testing.T) {
 
 func TestReplayTitleShowsFullShortPath(t *testing.T) {
 	got := replayTitle(`/Users/mire/Slippi`)
-	want := `Replay Folder: /Users/mire/Slippi`
+	want := `Replay folder: /Users/mire/Slippi`
 	if got != want {
 		t.Fatalf("replayTitle() = %q, want %q", got, want)
 	}
@@ -47,7 +47,7 @@ func TestReplayTitleShowsFullShortPath(t *testing.T) {
 
 func TestEndCallTitleShowsHotkey(t *testing.T) {
 	got := endCallTitle("f8")
-	want := "End Call (F8)"
+	want := "End call (F8)"
 	if got != want {
 		t.Fatalf("endCallTitle() = %q, want %q", got, want)
 	}
@@ -55,10 +55,10 @@ func TestEndCallTitleShowsHotkey(t *testing.T) {
 
 func TestEndCallTitleShowsSymbolHotkeys(t *testing.T) {
 	cases := map[string]string{
-		"backtick":  "End Call (`)",
-		"`":         "End Call (`)",
-		"backslash": `End Call (\)`,
-		`\`:         `End Call (\)`,
+		"backtick":  "End call (`)",
+		"`":         "End call (`)",
+		"backslash": `End call (\)`,
+		`\`:         `End call (\)`,
 	}
 	for key, want := range cases {
 		if got := endCallTitle(key); got != want {
@@ -69,7 +69,7 @@ func TestEndCallTitleShowsSymbolHotkeys(t *testing.T) {
 
 func TestEndCallTitleOmitsEmptyHotkey(t *testing.T) {
 	got := endCallTitle("")
-	want := "End Call"
+	want := "End call"
 	if got != want {
 		t.Fatalf("endCallTitle() = %q, want %q", got, want)
 	}
@@ -77,26 +77,26 @@ func TestEndCallTitleOmitsEmptyHotkey(t *testing.T) {
 
 func TestReplayTitleCompactsLongMacPath(t *testing.T) {
 	got := replayTitle(`/Users/mire/some/really/really/really/really/long/path/to/Slippi`)
-	if len(strings.TrimPrefix(got, "Replay Folder: ")) > 58 {
+	if len(strings.TrimPrefix(got, "Replay folder: ")) > 58 {
 		t.Fatalf("compacted path is too long: %q", got)
 	}
 	if !strings.Contains(got, ".../Slippi") {
 		t.Fatalf("compacted path should preserve final folder: %q", got)
 	}
-	if !strings.HasPrefix(got, "Replay Folder: /Users/mire/") {
+	if !strings.HasPrefix(got, "Replay folder: /Users/mire/") {
 		t.Fatalf("compacted path should preserve leading context: %q", got)
 	}
 }
 
 func TestReplayTitleCompactsLongWindowsPath(t *testing.T) {
 	got := replayTitle(`C:\Users\mire\some\really\really\really\really\long\path\to\Slippi`)
-	if len(strings.TrimPrefix(got, "Replay Folder: ")) > 58 {
+	if len(strings.TrimPrefix(got, "Replay folder: ")) > 58 {
 		t.Fatalf("compacted path is too long: %q", got)
 	}
 	if !strings.Contains(got, `...\Slippi`) {
 		t.Fatalf("compacted path should preserve final folder: %q", got)
 	}
-	if !strings.HasPrefix(got, `Replay Folder: C:\Users\mire\`) {
+	if !strings.HasPrefix(got, `Replay folder: C:\Users\mire\`) {
 		t.Fatalf("compacted path should preserve leading context: %q", got)
 	}
 }

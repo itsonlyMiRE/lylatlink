@@ -39,6 +39,7 @@ type menu struct {
 	noiseGate     *systray.MenuItem
 	playback      *systray.MenuItem
 	autoJoin      *systray.MenuItem
+	playChimes    *systray.MenuItem
 	endCall       *systray.MenuItem
 	hotkeyRoot    *systray.MenuItem
 	inputRoot     *systray.MenuItem
@@ -74,31 +75,32 @@ func (r *Runner) ready(ctx context.Context) {
 
 	m.title = systray.AddMenuItem("LylatLink", "Open LylatLink project")
 	systray.AddSeparator()
-	m.status = systray.AddMenuItem("Status: Starting", "Current LylatLink status")
+	m.status = systray.AddMenuItem("Status: starting", "Current LylatLink status")
 	m.status.Disable()
 	m.match = systray.AddMenuItem("Match: none", "Current match")
 	m.match.Disable()
 	systray.AddSeparator()
 	m.autoJoin = systray.AddMenuItemCheckbox("Auto-join voice on match", "Automatically join voice when a match pairs", false)
-	m.endCall = systray.AddMenuItem("End Call", "End the current voice session")
+	m.playChimes = systray.AddMenuItemCheckbox("Connection sounds", "Play connect and disconnect chimes", false)
+	m.endCall = systray.AddMenuItem("End call", "End the current voice session")
 	m.endCall.Disable()
-	m.hotkeyRoot = systray.AddMenuItem("End Call Hotkey", "Choose the global end-call hotkey")
+	m.hotkeyRoot = systray.AddMenuItem("End call hotkey", "Choose the global end-call hotkey")
 	m.addHotkeyItems()
 	systray.AddSeparator()
-	m.inputRoot = systray.AddMenuItem("Input Device", "Choose microphone input")
-	m.refreshInput = m.inputRoot.AddSubMenuItem("Refresh Devices", "Refresh input devices")
-	m.outputRoot = systray.AddMenuItem("Output Device", "Choose remote audio playback output")
-	m.refreshOutput = m.outputRoot.AddSubMenuItem("Refresh Devices", "Refresh output devices")
+	m.inputRoot = systray.AddMenuItem("Input device", "Choose microphone input")
+	m.refreshInput = m.inputRoot.AddSubMenuItem("Refresh devices", "Refresh input devices")
+	m.outputRoot = systray.AddMenuItem("Output device", "Choose remote audio playback output")
+	m.refreshOutput = m.outputRoot.AddSubMenuItem("Refresh devices", "Refresh output devices")
 	systray.AddSeparator()
-	m.replayFolder = systray.AddMenuItem("Replay Folder: unset", "Configured replay folder")
-	m.editConfig = systray.AddMenuItem("Edit Config File", "Open LylatLink config file")
+	m.replayFolder = systray.AddMenuItem("Replay folder: unset", "Configured replay folder")
+	m.editConfig = systray.AddMenuItem("Edit config file", "Open LylatLink config file")
 	m.codec = systray.AddMenuItem("Codec: opus", "Configured voice codec")
 	m.codec.Disable()
-	m.inputGain = systray.AddMenuItem("Input Gain: 0.0 dB", "Configured microphone gain")
+	m.inputGain = systray.AddMenuItem("Input gain: 0.0 dB", "Configured microphone gain")
 	m.inputGain.Disable()
-	m.outputGain = systray.AddMenuItem("Output Gain: -1.5 dB", "Configured remote playback gain")
+	m.outputGain = systray.AddMenuItem("Output gain: -1.5 dB", "Configured remote playback gain")
 	m.outputGain.Disable()
-	m.noiseGate = systray.AddMenuItem("Noise Gate: -45.0 dBFS", "Configured microphone noise gate threshold")
+	m.noiseGate = systray.AddMenuItem("Noise gate: -45.0 dBFS", "Configured microphone noise gate threshold")
 	m.noiseGate.Disable()
 	m.playback = systray.AddMenuItem("Playback: on", "Remote speaker playback state")
 	m.playback.Disable()
@@ -112,6 +114,7 @@ func (r *Runner) ready(ctx context.Context) {
 	go m.handleTitle()
 	go m.listenStatus(ctx)
 	go m.handleAutoJoin()
+	go m.handlePlayChimes()
 	go m.handleEndCall()
 	go m.handleHotkeys()
 	go m.handleRefreshInputs()
@@ -164,6 +167,15 @@ func (m *menu) handleAutoJoin() {
 	}
 }
 
+func (m *menu) handlePlayChimes() {
+	for range m.playChimes.ClickedCh {
+		next := !m.last.PlayChimes
+		m.controller.SetPlayChimes(next)
+		m.last.PlayChimes = next
+		m.applyPlayChimes(next)
+	}
+}
+
 func (m *menu) handleEndCall() {
 	for range m.endCall.ClickedCh {
 		m.controller.EndCall()
@@ -199,7 +211,7 @@ func (m *menu) handleRefreshOutputs() {
 
 func (m *menu) handleReplayFolder() {
 	for range m.replayFolder.ClickedCh {
-		builder := dialog.Directory().Title("Choose Slippi Replay Folder")
+		builder := dialog.Directory().Title("Choose Slippi replay folder")
 		if m.last.ReplayDir != "" {
 			builder = builder.SetStartDir(m.last.ReplayDir)
 		}
@@ -245,15 +257,16 @@ func (m *menu) update(status app.Status) {
 	m.match.SetTitle(matchTitle(status))
 	m.replayFolder.SetTitle(replayTitle(status.ReplayDir))
 	m.codec.SetTitle(fmt.Sprintf("Codec: %s", status.AudioCodec))
-	m.inputGain.SetTitle(fmt.Sprintf("Input Gain: %.1f dB", status.InputGainDB))
-	m.outputGain.SetTitle(fmt.Sprintf("Output Gain: %.1f dB", status.OutputGainDB))
-	m.noiseGate.SetTitle(fmt.Sprintf("Noise Gate: %.1f dBFS", status.NoiseGateDB))
+	m.inputGain.SetTitle(fmt.Sprintf("Input gain: %.1f dB", status.InputGainDB))
+	m.outputGain.SetTitle(fmt.Sprintf("Output gain: %.1f dB", status.OutputGainDB))
+	m.noiseGate.SetTitle(fmt.Sprintf("Noise gate: %.1f dBFS", status.NoiseGateDB))
 	if status.NoPlayback {
 		m.playback.SetTitle("Playback: off")
 	} else {
 		m.playback.SetTitle("Playback: on")
 	}
 	m.applyAutoJoin(status.AutoJoin)
+	m.applyPlayChimes(status.PlayChimes)
 	m.applyEndCall(status)
 	m.applyEndCallHotkey(status.EndCallHotkey)
 	m.applyInputChecks()
@@ -265,6 +278,14 @@ func (m *menu) applyAutoJoin(enabled bool) {
 		m.autoJoin.Check()
 	} else {
 		m.autoJoin.Uncheck()
+	}
+}
+
+func (m *menu) applyPlayChimes(enabled bool) {
+	if enabled {
+		m.playChimes.Check()
+	} else {
+		m.playChimes.Uncheck()
 	}
 }
 
@@ -291,7 +312,7 @@ func (m *menu) addHotkeyItems() {
 
 func (m *menu) applyEndCallHotkey(key string) {
 	key = hotkey.NormalizeKey(key)
-	m.hotkeyRoot.SetTitle("End Call Hotkey: " + hotkey.Label(key))
+	m.hotkeyRoot.SetTitle("End call hotkey: " + hotkey.Label(key))
 	for itemKey, item := range m.hotkeyItems {
 		if itemKey == key {
 			item.Check()
@@ -307,7 +328,7 @@ func (m *menu) refreshInputs() {
 	}
 	m.inputItems = map[string]*systray.MenuItem{}
 
-	m.addInputItem("", "System Default", m.last.InputDeviceID == "")
+	m.addInputItem("", "System default", m.last.InputDeviceID == "")
 
 	devices, err := audio.ListInputDevices()
 	if err != nil {
@@ -338,7 +359,7 @@ func (m *menu) refreshOutputs() {
 	}
 	m.outputItems = map[string]*systray.MenuItem{}
 
-	m.addOutputItem("", "System Default", m.last.OutputDeviceID == "")
+	m.addOutputItem("", "System default", m.last.OutputDeviceID == "")
 
 	devices, err := audio.ListOutputDevices()
 	if err != nil {
@@ -437,13 +458,13 @@ func statusTitle(status app.Status) string {
 		}
 		return "Waiting for other player"
 	case app.StateInVoice:
-		return "In Voice"
+		return "In voice"
 	case app.StateNotReady:
-		return "Not Ready"
+		return "Not ready"
 	case app.StateError:
 		return friendlyErrorTitle(status.Message)
 	case app.StateShuttingDown:
-		return "Shutting Down"
+		return "Shutting down"
 	default:
 		return string(status.State)
 	}
@@ -494,17 +515,17 @@ func matchTitle(status app.Status) string {
 
 func replayTitle(path string) string {
 	if path == "" {
-		return "Replay Folder: unset"
+		return "Replay folder: unset"
 	}
-	return "Replay Folder: " + compactPath(path, 58)
+	return "Replay folder: " + compactPath(path, 58)
 }
 
 func endCallTitle(key string) string {
 	key = hotkey.NormalizeKey(key)
 	if key == "" {
-		return "End Call"
+		return "End call"
 	}
-	return "End Call (" + hotkey.Label(key) + ")"
+	return "End call (" + hotkey.Label(key) + ")"
 }
 
 func compactPath(path string, maxLen int) string {

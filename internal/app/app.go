@@ -42,6 +42,7 @@ type Status struct {
 	State          State
 	ReplayDir      string
 	AutoJoin       bool
+	PlayChimes     bool
 	InputDeviceID  string
 	OutputDeviceID string
 	AudioCodec     string
@@ -72,6 +73,7 @@ type Controller struct {
 type command struct {
 	kind           commandKind
 	autoJoin       bool
+	playChimes     bool
 	inputDeviceID  string
 	outputDeviceID string
 	replayDir      string
@@ -89,6 +91,7 @@ type commandKind int
 
 const (
 	commandSetAutoJoin commandKind = iota + 1
+	commandSetPlayChimes
 	commandSetInputDevice
 	commandSetOutputDevice
 	commandSetReplayDir
@@ -174,6 +177,10 @@ func (c *Controller) Run(ctx context.Context) error {
 			switch cmd.kind {
 			case commandSetAutoJoin:
 				c.setAutoJoin(cmd.autoJoin)
+				c.publish(c.statusForCurrent(active, waiting, ""))
+			case commandSetPlayChimes:
+				c.setPlayChimes(cmd.playChimes)
+				voiceController.Options.PlayChimes = cmd.playChimes
 				c.publish(c.statusForCurrent(active, waiting, ""))
 			case commandSetInputDevice:
 				c.setInputDeviceID(cmd.inputDeviceID)
@@ -341,6 +348,10 @@ func (c *Controller) SetAutoJoin(enabled bool) {
 	c.enqueue(command{kind: commandSetAutoJoin, autoJoin: enabled})
 }
 
+func (c *Controller) SetPlayChimes(enabled bool) {
+	c.enqueue(command{kind: commandSetPlayChimes, playChimes: enabled})
+}
+
 func (c *Controller) SetInputDeviceID(id string) {
 	c.enqueue(command{kind: commandSetInputDevice, inputDeviceID: id})
 }
@@ -380,6 +391,7 @@ func (c *Controller) newVoiceController(signalClient *signaling.Client) *voice.W
 		InputGainDB:       cfg.InputGainDB,
 		OutputGainDB:      cfg.OutputGainDB,
 		NoiseGateDB:       cfg.NoiseGateDB,
+		PlayChimes:        cfg.PlayChimes,
 		UseSyntheticAudio: c.opts.SyntheticAudio,
 		DisablePlayback:   c.opts.NoPlayback,
 		Verbose:           c.opts.Verbose,
@@ -389,6 +401,14 @@ func (c *Controller) newVoiceController(signalClient *signaling.Client) *voice.W
 func (c *Controller) setAutoJoin(enabled bool) {
 	c.mu.Lock()
 	c.cfg.AutoJoin = enabled
+	cfg := c.cfg
+	c.mu.Unlock()
+	c.saveConfig(cfg)
+}
+
+func (c *Controller) setPlayChimes(enabled bool) {
+	c.mu.Lock()
+	c.cfg.PlayChimes = enabled
 	cfg := c.cfg
 	c.mu.Unlock()
 	c.saveConfig(cfg)
@@ -505,6 +525,7 @@ func (c *Controller) status(state State, matchID string, label string, message s
 		State:          state,
 		ReplayDir:      cfg.ReplayDir,
 		AutoJoin:       cfg.AutoJoin,
+		PlayChimes:     cfg.PlayChimes,
 		InputDeviceID:  cfg.InputDeviceID,
 		OutputDeviceID: cfg.OutputDeviceID,
 		AudioCodec:     cfg.AudioCodec,

@@ -21,6 +21,7 @@ const configHeader = `# replay_dir is a fallback.
 type Config struct {
 	ReplayDir             string  `toml:"replay_dir"`
 	AutoJoin              bool    `toml:"auto_join"`
+	PlayChimes            bool    `toml:"play_chimes"`
 	EndCallHotkey         string  `toml:"end_call_hotkey"`
 	InputDeviceID         string  `toml:"input_device_id,omitempty"`
 	OutputDeviceID        string  `toml:"output_device_id,omitempty"`
@@ -35,6 +36,7 @@ type Config struct {
 func Default() Config {
 	return Config{
 		AutoJoin:      true,
+		PlayChimes:    true,
 		EndCallHotkey: "f8",
 		AudioCodec:    "opus",
 		OutputGainDB:  -1.5,
