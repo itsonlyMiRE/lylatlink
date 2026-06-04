@@ -9,7 +9,7 @@ LylatLink is a small open-source companion app for Slippi that adds voice chat w
 
 Core details:
 - **Tiny <20MB executable size** - built fully in Go; no large resource-hungry Electron app
-- **Neglible resource consumption** - <50MB memory
+- **Negligible resource consumption** - <50MB memory
 - **Fully open source**
 - **ZERO setup required** in most cases - use the launch-together app and play normally
 - **Simple UI** - little menu in your system tray + an info and status overlay in-game [overlay WIP] 
