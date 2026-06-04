@@ -42,9 +42,7 @@ Core details:
 
 To use LylatLink, Slippi must be configured to save .slp replays. LylatLink will try to find your Slippi Dolphin install and replay folder automatically using your Slippi Launcher and Dolphin settings. If it does not, open the tray menu, choose **Replay Folder**, and select the folder that stores your .slp replays. ***Note:** If you organize replays into monthly subfolders, choose the parent folder; i.e., if they save to [path]/Slippi/2026-06, select the 'Slippi' folder.*
 
-For auto-detecting your .slp replay folder, the app checks Slippi Launcher's saved settings first, then the known Slippi Dolphin `Dolphin.ini` locations, then the default `Slippi` folder for your OS. The launch-together app looks for Slippi Launcher's bundled netplay Dolphin install in the normal Slippi Launcher app-data folders. If you installed or moved things somewhere unusual, use the tray **Replay folder** picker or run the standalone `lylatlink` app.
-
-If this is not working for whatever reason, you can find the folder location in Slippi Launcher under Replay settings:
+To enable replays or find your replay folder if LylatLink can't find it for some reason, refer to this settings page in the Slippi Launcher:
 
 ![Slippi Launcher replay folder setting](docs/images/slippi-replay-folder.png)
 
