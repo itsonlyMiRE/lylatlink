@@ -141,13 +141,13 @@ Build Windows release binaries from PowerShell on a Windows machine:
 .\scripts\build-windows.ps1
 ```
 
-The script writes `dist\windows-amd64\lylatlink.exe` for default no-console tray use, `dist\windows-amd64\lylatlink-console.exe` for foreground diagnostics, `dist\windows-amd64\Slippi Dolphin with LylatLink.exe` for launching both apps together, and the needed Opus/mingw runtime DLLs beside the executables. The no-console app can also attach/open a console for diagnostic flags such as `-console`, `-list-audio-devices`, and `-audio-device-test`.
+The script writes `dist\windows-amd64\lylatlink.exe` for default no-console tray use, `dist\windows-amd64\Slippi Dolphin with LylatLink.exe` for launching both apps together, and the needed Opus/mingw runtime DLLs beside the executables. The app can attach/open a console for diagnostic flags such as `-console`, `-list-audio-devices`, and `-audio-device-test`.
 
 GitHub Actions also builds macOS and Windows artifacts. Run the `Build` workflow from the Actions tab, then download `lylatlink-macos` or `lylatlink-windows-amd64` from the workflow run artifacts.
 
 No Windows installer is planned for the normal release path. The app is intended to run as a portable tray executable, with settings stored in AppData rather than beside the executable. An installer would only be useful later for optional conveniences such as Start Menu shortcuts, auto-update wiring, or a bundled Slippi launcher shortcut.
 
-The Windows portable zip should contain `lylatlink.exe`, `lylatlink-console.exe`, `Slippi Dolphin with LylatLink.exe`, and the required DLLs. User config persists separately under `%APPDATA%\lylatlink\config.toml`.
+The Windows portable zip should contain `lylatlink.exe`, `Slippi Dolphin with LylatLink.exe`, and the required DLLs. User config persists separately under `%APPDATA%\lylatlink\config.toml`.
 
 To test WebRTC pairing locally, run the signaling server and two clients with `auto_join=true`, then copy the same replay into both watched directories. Successful output includes:
 
