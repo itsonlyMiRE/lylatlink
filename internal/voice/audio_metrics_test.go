@@ -90,8 +90,8 @@ func TestApplyGainInPlace(t *testing.T) {
 func TestChimeGainIsGentleAttenuation(t *testing.T) {
 	frame := []int16{10000}
 	applyGainInPlace(frame, chimeGainDB)
-	if frame[0] < 8900 || frame[0] > 9000 {
-		t.Fatalf("chime sample after gain = %d, want about 8913", frame[0])
+	if frame[0] < 6250 || frame[0] > 6360 {
+		t.Fatalf("chime sample after gain = %d, want about 6310", frame[0])
 	}
 }
 

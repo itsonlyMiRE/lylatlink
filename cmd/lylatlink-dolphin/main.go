@@ -69,11 +69,11 @@ func executableDir() (string, error) {
 func lylatlinkPath(launcherDir string) (string, error) {
 	appBundleRoot := filepath.Clean(filepath.Join(launcherDir, "..", "..", ".."))
 	candidates := []string{
-		filepath.Join(launcherDir, "..", "Resources", "LylatLink.app"),
 		filepath.Join(launcherDir, "lylatlink.exe"),
 		filepath.Join(launcherDir, "LylatLink.app"),
 		filepath.Join(appBundleRoot, "..", "LylatLink.app"),
 		filepath.Join(appBundleRoot, "LylatLink.app"),
+		filepath.Join(launcherDir, "..", "Resources", "LylatLink.app"),
 	}
 	for _, candidate := range candidates {
 		if exists(candidate) {

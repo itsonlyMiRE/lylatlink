@@ -119,7 +119,7 @@ fi
 codesign --force --deep --sign - --entitlements packaging/macos/entitlements.plist "$APP"
 codesign --verify --deep --strict "$APP"
 ditto "$APP" "$HELPER_RESOURCES/LylatLink.app"
-codesign --force --deep --sign - "$HELPER_APP"
+codesign --force --deep --sign - --entitlements packaging/macos/entitlements.plist "$HELPER_APP"
 codesign --verify --deep --strict "$HELPER_APP"
 
 mkdir -p "$ZIP_ROOT"

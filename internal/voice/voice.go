@@ -79,7 +79,7 @@ type signalEnvelope struct {
 const (
 	audioCodecOpus = "opus"
 	audioCodecPCMU = "pcmu"
-	chimeGainDB    = -1.0
+	chimeGainDB    = -4.0
 )
 
 var startChimeSamplesOnce sync.Once
