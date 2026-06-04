@@ -14,7 +14,6 @@ import "C"
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 )
 
@@ -59,7 +58,7 @@ func lylatlinkHotkeyPressed() {
 }
 
 func darwinKeyCode(key string) (uint32, error) {
-	switch strings.ToLower(strings.TrimSpace(key)) {
+	switch NormalizeKey(key) {
 	case "f1":
 		return 0x7A, nil
 	case "f2":
@@ -84,6 +83,10 @@ func darwinKeyCode(key string) (uint32, error) {
 		return 0x67, nil
 	case "f12":
 		return 0x6F, nil
+	case "backtick":
+		return 0x32, nil
+	case "backslash":
+		return 0x2A, nil
 	default:
 		return 0, fmt.Errorf("unsupported hotkey %q", key)
 	}

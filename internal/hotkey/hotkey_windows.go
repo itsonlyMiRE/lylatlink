@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -81,7 +80,7 @@ func Start(ctx context.Context, key string, onPress func()) error {
 }
 
 func windowsVirtualKey(key string) (uint32, error) {
-	switch strings.ToLower(strings.TrimSpace(key)) {
+	switch NormalizeKey(key) {
 	case "f1":
 		return 0x70, nil
 	case "f2":
@@ -106,6 +105,10 @@ func windowsVirtualKey(key string) (uint32, error) {
 		return 0x7A, nil
 	case "f12":
 		return 0x7B, nil
+	case "backtick":
+		return 0xC0, nil
+	case "backslash":
+		return 0xDC, nil
 	default:
 		return 0, fmt.Errorf("unsupported hotkey %q", key)
 	}

@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -180,7 +180,9 @@ func main() {
 		trayCtx, cancel := context.WithCancel(ctx)
 		defer cancel()
 		controller := app.NewController(cfg, resolvedConfigPath, opts)
-		startEndCallHotkey(trayCtx, cfg.EndCallHotkey, controller)
+		hotkeys := newEndCallHotkeys(trayCtx, controller)
+		controller.SetEndCallHotkeyChanged(hotkeys.Set)
+		hotkeys.Set(cfg.EndCallHotkey)
 		errs := make(chan error, 1)
 		go func() {
 			errs <- controller.Run(trayCtx)
@@ -194,25 +196,59 @@ func main() {
 	}
 
 	controller := app.NewController(cfg, resolvedConfigPath, opts)
-	startEndCallHotkey(ctx, cfg.EndCallHotkey, controller)
+	hotkeys := newEndCallHotkeys(ctx, controller)
+	controller.SetEndCallHotkeyChanged(hotkeys.Set)
+	hotkeys.Set(cfg.EndCallHotkey)
 	if err := controller.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func startEndCallHotkey(ctx context.Context, key string, controller *app.Controller) {
-	key = strings.TrimSpace(key)
+type endCallHotkeys struct {
+	ctx        context.Context
+	controller *app.Controller
+
+	mu     sync.Mutex
+	cancel context.CancelFunc
+	key    string
+}
+
+func newEndCallHotkeys(ctx context.Context, controller *app.Controller) *endCallHotkeys {
+	return &endCallHotkeys{ctx: ctx, controller: controller}
+}
+
+func (h *endCallHotkeys) Set(key string) {
+	key = hotkey.NormalizeKey(key)
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.key == key {
+		return
+	}
+	if h.cancel != nil {
+		h.cancel()
+		h.cancel = nil
+		time.Sleep(100 * time.Millisecond)
+	}
+	h.key = key
 	if key == "" {
+		log.Printf("global end-call hotkey disabled")
 		return
 	}
-	if err := hotkey.Start(ctx, key, func() {
-		log.Printf("global end-call hotkey detected: %s", key)
-		controller.EndCall()
+
+	hotkeyCtx, cancel := context.WithCancel(h.ctx)
+	if err := hotkey.Start(hotkeyCtx, key, func() {
+		log.Printf("global end-call hotkey detected: %s", hotkey.Label(key))
+		h.controller.EndCall()
 	}); err != nil {
-		log.Printf("global end-call hotkey unavailable (%s): %v", key, err)
+		cancel()
+		h.key = ""
+		log.Printf("global end-call hotkey unavailable (%s): %v", hotkey.Label(key), err)
 		return
 	}
-	log.Printf("global end-call hotkey registered: %s", key)
+	h.cancel = cancel
+	log.Printf("global end-call hotkey registered: %s", hotkey.Label(key))
 }
 
 func flagWasSet(name string) bool {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"lylatlink/internal/config"
+	"lylatlink/internal/hotkey"
 	"lylatlink/internal/signaling"
 	"lylatlink/internal/slp"
 	"lylatlink/internal/voice"
@@ -61,6 +62,8 @@ type Controller struct {
 	cfgPath string
 	opts    Options
 
+	endCallHotkeyChanged func(string)
+
 	commands chan command
 	statusCh chan Status
 	last     Status
@@ -72,6 +75,7 @@ type command struct {
 	inputDeviceID  string
 	outputDeviceID string
 	replayDir      string
+	endCallHotkey  string
 }
 
 type signalResult struct {
@@ -88,6 +92,7 @@ const (
 	commandSetInputDevice
 	commandSetOutputDevice
 	commandSetReplayDir
+	commandSetEndCallHotkey
 	commandEndCall
 )
 
@@ -189,6 +194,9 @@ func (c *Controller) Run(ctx context.Context) error {
 				}
 				events, errs, stopWatcher = startWatcher(ctx, cmd.replayDir)
 				c.publish(c.status(StateWatching, "", "", "Replay folder updated."))
+			case commandSetEndCallHotkey:
+				c.setEndCallHotkey(cmd.endCallHotkey)
+				c.publish(c.statusForCurrent(active, waiting, ""))
 			case commandEndCall:
 				c.endCalls(ctx, signalClient, voiceController, nonce, active, waiting)
 				c.publish(c.status(StateWatching, "", "", ""))
@@ -323,6 +331,12 @@ func (c *Controller) ConfigPath() string {
 	return c.cfgPath
 }
 
+func (c *Controller) SetEndCallHotkeyChanged(fn func(string)) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.endCallHotkeyChanged = fn
+}
+
 func (c *Controller) SetAutoJoin(enabled bool) {
 	c.enqueue(command{kind: commandSetAutoJoin, autoJoin: enabled})
 }
@@ -337,6 +351,10 @@ func (c *Controller) SetOutputDeviceID(id string) {
 
 func (c *Controller) SetReplayDir(path string) {
 	c.enqueue(command{kind: commandSetReplayDir, replayDir: path})
+}
+
+func (c *Controller) SetEndCallHotkey(key string) {
+	c.enqueue(command{kind: commandSetEndCallHotkey, endCallHotkey: key})
 }
 
 func (c *Controller) EndCall() {
@@ -411,6 +429,19 @@ func (c *Controller) setReplayDir(path string) error {
 	c.mu.Unlock()
 	c.saveConfig(cfg)
 	return nil
+}
+
+func (c *Controller) setEndCallHotkey(key string) {
+	key = hotkey.NormalizeKey(key)
+	c.mu.Lock()
+	c.cfg.EndCallHotkey = key
+	cfg := c.cfg
+	changed := c.endCallHotkeyChanged
+	c.mu.Unlock()
+	c.saveConfig(cfg)
+	if changed != nil {
+		changed(key)
+	}
 }
 
 func (c *Controller) saveConfig(cfg config.Config) {

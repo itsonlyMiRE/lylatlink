@@ -53,6 +53,20 @@ func TestEndCallTitleShowsHotkey(t *testing.T) {
 	}
 }
 
+func TestEndCallTitleShowsSymbolHotkeys(t *testing.T) {
+	cases := map[string]string{
+		"backtick":  "End Call (`)",
+		"`":         "End Call (`)",
+		"backslash": `End Call (\)`,
+		`\`:         `End Call (\)`,
+	}
+	for key, want := range cases {
+		if got := endCallTitle(key); got != want {
+			t.Fatalf("endCallTitle(%q) = %q, want %q", key, got, want)
+		}
+	}
+}
+
 func TestEndCallTitleOmitsEmptyHotkey(t *testing.T) {
 	got := endCallTitle("")
 	want := "End Call"

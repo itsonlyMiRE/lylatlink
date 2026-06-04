@@ -16,6 +16,7 @@ import (
 	"lylatlink/assets"
 	"lylatlink/internal/app"
 	"lylatlink/internal/audio"
+	"lylatlink/internal/hotkey"
 )
 
 const projectURL = "https://github.com/itsonlyMiRE/lylatlink"
@@ -39,6 +40,7 @@ type menu struct {
 	playback      *systray.MenuItem
 	autoJoin      *systray.MenuItem
 	endCall       *systray.MenuItem
+	hotkeyRoot    *systray.MenuItem
 	inputRoot     *systray.MenuItem
 	refreshInput  *systray.MenuItem
 	outputRoot    *systray.MenuItem
@@ -47,6 +49,7 @@ type menu struct {
 
 	inputItems  map[string]*systray.MenuItem
 	outputItems map[string]*systray.MenuItem
+	hotkeyItems map[string]*systray.MenuItem
 	last        app.Status
 }
 
@@ -66,6 +69,7 @@ func (r *Runner) ready(ctx context.Context) {
 		controller:  r.Controller,
 		inputItems:  map[string]*systray.MenuItem{},
 		outputItems: map[string]*systray.MenuItem{},
+		hotkeyItems: map[string]*systray.MenuItem{},
 	}
 
 	m.title = systray.AddMenuItem("LylatLink", "Open LylatLink project")
@@ -78,6 +82,8 @@ func (r *Runner) ready(ctx context.Context) {
 	m.autoJoin = systray.AddMenuItemCheckbox("Auto-join voice on match", "Automatically join voice when a match pairs", false)
 	m.endCall = systray.AddMenuItem("End Call", "End the current voice session")
 	m.endCall.Disable()
+	m.hotkeyRoot = systray.AddMenuItem("End Call Hotkey", "Choose the global end-call hotkey")
+	m.addHotkeyItems()
 	systray.AddSeparator()
 	m.inputRoot = systray.AddMenuItem("Input Device", "Choose microphone input")
 	m.refreshInput = m.inputRoot.AddSubMenuItem("Refresh Devices", "Refresh input devices")
@@ -107,6 +113,7 @@ func (r *Runner) ready(ctx context.Context) {
 	go m.listenStatus(ctx)
 	go m.handleAutoJoin()
 	go m.handleEndCall()
+	go m.handleHotkeys()
 	go m.handleRefreshInputs()
 	go m.handleRefreshOutputs()
 	go m.handleReplayFolder()
@@ -160,6 +167,21 @@ func (m *menu) handleAutoJoin() {
 func (m *menu) handleEndCall() {
 	for range m.endCall.ClickedCh {
 		m.controller.EndCall()
+	}
+}
+
+func (m *menu) handleHotkeys() {
+	for key, item := range m.hotkeyItems {
+		key := key
+		item := item
+		go func() {
+			for range item.ClickedCh {
+				m.controller.SetEndCallHotkey(key)
+				m.last.EndCallHotkey = key
+				m.applyEndCallHotkey(key)
+				m.endCall.SetTitle(endCallTitle(key))
+			}
+		}()
 	}
 }
 
@@ -233,6 +255,7 @@ func (m *menu) update(status app.Status) {
 	}
 	m.applyAutoJoin(status.AutoJoin)
 	m.applyEndCall(status)
+	m.applyEndCallHotkey(status.EndCallHotkey)
 	m.applyInputChecks()
 	m.applyOutputChecks()
 }
@@ -252,6 +275,29 @@ func (m *menu) applyEndCall(status app.Status) {
 		m.endCall.Enable()
 	default:
 		m.endCall.Disable()
+	}
+}
+
+func (m *menu) addHotkeyItems() {
+	for _, choice := range hotkey.Choices() {
+		tooltip := "Use " + choice.Label + " to end calls"
+		if choice.Key == "" {
+			tooltip = "Disable the global end-call hotkey"
+		}
+		item := m.hotkeyRoot.AddSubMenuItemCheckbox(choice.Label, tooltip, false)
+		m.hotkeyItems[choice.Key] = item
+	}
+}
+
+func (m *menu) applyEndCallHotkey(key string) {
+	key = hotkey.NormalizeKey(key)
+	m.hotkeyRoot.SetTitle("End Call Hotkey: " + hotkey.Label(key))
+	for itemKey, item := range m.hotkeyItems {
+		if itemKey == key {
+			item.Check()
+		} else {
+			item.Uncheck()
+		}
 	}
 }
 
@@ -453,12 +499,12 @@ func replayTitle(path string) string {
 	return "Replay Folder: " + compactPath(path, 58)
 }
 
-func endCallTitle(hotkey string) string {
-	hotkey = strings.TrimSpace(hotkey)
-	if hotkey == "" {
+func endCallTitle(key string) string {
+	key = hotkey.NormalizeKey(key)
+	if key == "" {
 		return "End Call"
 	}
-	return "End Call (" + strings.ToUpper(hotkey) + ")"
+	return "End Call (" + hotkey.Label(key) + ")"
 }
 
 func compactPath(path string, maxLen int) string {

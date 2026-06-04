@@ -8,6 +8,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/adrg/xdg"
+
+	"lylatlink/internal/hotkey"
 )
 
 const appConfigPath = "lylatlink/config.toml"
@@ -19,7 +21,7 @@ const configHeader = `# replay_dir is a fallback.
 type Config struct {
 	ReplayDir             string  `toml:"replay_dir"`
 	AutoJoin              bool    `toml:"auto_join"`
-	EndCallHotkey         string  `toml:"end_call_hotkey,omitempty"`
+	EndCallHotkey         string  `toml:"end_call_hotkey"`
 	InputDeviceID         string  `toml:"input_device_id,omitempty"`
 	OutputDeviceID        string  `toml:"output_device_id,omitempty"`
 	AudioCodec            string  `toml:"audio_codec,omitempty"`
@@ -65,6 +67,7 @@ func LoadOrCreate(path string) (Config, error) {
 		return Config{}, err
 	}
 	cfg.ReplayDir = normalizePathForConfig(cfg.ReplayDir)
+	cfg.EndCallHotkey = hotkey.NormalizeKey(cfg.EndCallHotkey)
 	if cfg.SignalBaseURL == "" {
 		cfg.SignalBaseURL = Default().SignalBaseURL
 	}

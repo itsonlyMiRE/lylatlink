@@ -57,3 +57,26 @@ func TestSaveNormalizesWindowsReplayDir(t *testing.T) {
 		t.Fatalf("replay dir = %q", cfg.ReplayDir)
 	}
 }
+
+func TestSavePersistsDisabledEndCallHotkey(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := Save(path, Config{AutoJoin: true, EndCallHotkey: ""}); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `end_call_hotkey = ""`) {
+		t.Fatalf("config did not persist disabled hotkey:\n%s", string(data))
+	}
+
+	cfg, err := LoadOrCreate(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.EndCallHotkey != "" {
+		t.Fatalf("end call hotkey = %q, want disabled", cfg.EndCallHotkey)
+	}
+}

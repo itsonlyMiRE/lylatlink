@@ -23,7 +23,7 @@ Implemented:
 - It decodes incoming Opus/PCMU audio and plays it through the selected/default speaker or headphones.
 - It plays an embedded connection chime through the selected/default output device before remote voice playback starts.
 - It has a system tray mode with app icon, status, match label, auto-join toggle, end call, input/output device choosers, replay folder picker, config-file opener, codec/playback display, input/output/noise gate readouts, and quit.
-- It registers a global end-call hotkey (`F8` by default) on macOS and Windows, logs every detected press, and routes it through the same end-call path as the tray button.
+- It registers a configurable global end-call hotkey (`F8` by default) on macOS and Windows, exposes a tray picker for F8-F12/backtick/backslash/disabled, logs every detected press, and routes it through the same end-call path as the tray button.
 - The Node signaling server exposes `POST /match/start`, `POST /match/end`, and `WSS /signal`.
 - The signaling server issues coturn-compatible TURN credentials with an 8-minute default TTL, rate-limits each source IP, and prevents unrelated nonces from ending pending matches.
 - Terraform infra can run the signaling server and coturn on one EC2-backed ECS host.
@@ -72,7 +72,7 @@ audio_codec = "opus" # opus or pcmu
 input_gain_db = 0.0
 output_gain_db = -1.5
 noise_gate_threshold_db = -45.0
-end_call_hotkey = "f8"
+end_call_hotkey = "f8" # f8, f9, f10, f11, f12, backtick, backslash, or empty/disabled
 ```
 
 Then:

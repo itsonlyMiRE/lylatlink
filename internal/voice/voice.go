@@ -10,6 +10,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -62,9 +63,10 @@ type Options struct {
 }
 
 type session struct {
-	cancel context.CancelFunc
-	pc     *webrtc.PeerConnection
-	ws     *websocket.Conn
+	cancel      context.CancelFunc
+	pc          *webrtc.PeerConnection
+	ws          *websocket.Conn
+	audioPlayed atomic.Bool
 }
 
 type signalEnvelope struct {
@@ -76,11 +78,16 @@ type signalEnvelope struct {
 const (
 	audioCodecOpus = "opus"
 	audioCodecPCMU = "pcmu"
+	chimeGainDB    = -1.0
 )
 
-var chimeSamplesOnce sync.Once
-var chimeSamples []int16
-var chimeSamplesErr error
+var startChimeSamplesOnce sync.Once
+var startChimeSamples []int16
+var startChimeSamplesErr error
+
+var endChimeSamplesOnce sync.Once
+var endChimeSamples []int16
+var endChimeSamplesErr error
 
 func NewWebRTCController(signalClient *signaling.Client, options ...Options) *WebRTCController {
 	opts := Options{}
@@ -113,10 +120,17 @@ func redactToken(token string) string {
 }
 
 func connectionChimeSamples() ([]int16, error) {
-	chimeSamplesOnce.Do(func() {
-		chimeSamples, chimeSamplesErr = audio.DecodePCM16MonoWAV(assets.ChimeWAV)
+	startChimeSamplesOnce.Do(func() {
+		startChimeSamples, startChimeSamplesErr = audio.DecodePCM16MonoWAV(assets.StartWAV)
 	})
-	return chimeSamples, chimeSamplesErr
+	return startChimeSamples, startChimeSamplesErr
+}
+
+func endChimeSamplesPCM() ([]int16, error) {
+	endChimeSamplesOnce.Do(func() {
+		endChimeSamples, endChimeSamplesErr = audio.DecodePCM16MonoWAV(assets.EndWAV)
+	})
+	return endChimeSamples, endChimeSamplesErr
 }
 
 func (c *WebRTCController) Start(ctx context.Context, matchID string, room signaling.StartResponse) error {
@@ -211,7 +225,7 @@ func (c *WebRTCController) Start(ctx context.Context, matchID string, room signa
 	return nil
 }
 
-func (c *WebRTCController) Stop(_ context.Context, matchID string) error {
+func (c *WebRTCController) Stop(ctx context.Context, matchID string) error {
 	c.mu.Lock()
 	current := c.sessions[matchID]
 	delete(c.sessions, matchID)
@@ -225,6 +239,9 @@ func (c *WebRTCController) Stop(_ context.Context, matchID string) error {
 	}
 	if current.pc != nil {
 		_ = current.pc.Close()
+	}
+	if current.audioPlayed.Load() {
+		c.playEndChime(ctx, matchID)
 	}
 	log.Printf("voice stopped for %s", matchID)
 	return nil
@@ -678,6 +695,7 @@ func (c *WebRTCController) drainRemoteTrack(ctx context.Context, matchID string,
 			log.Printf("remote audio playback unavailable: %s: %v", matchID, err)
 		} else {
 			defer playback.Stop()
+			c.markAudioPlayed(matchID)
 			playConnectionChime(ctx, matchID, playback, c.Options.Verbose)
 			if c.Options.Verbose {
 				log.Printf(
@@ -734,6 +752,15 @@ func (c *WebRTCController) drainRemoteTrack(ctx context.Context, matchID string,
 	}
 }
 
+func (c *WebRTCController) markAudioPlayed(matchID string) {
+	c.mu.Lock()
+	current := c.sessions[matchID]
+	c.mu.Unlock()
+	if current != nil {
+		current.audioPlayed.Store(true)
+	}
+}
+
 func playConnectionChime(ctx context.Context, matchID string, playback *audio.Playback, verbose bool) {
 	samples, err := connectionChimeSamples()
 	if err != nil {
@@ -743,7 +770,39 @@ func playConnectionChime(ctx context.Context, matchID string, playback *audio.Pl
 	if verbose {
 		log.Printf("connection chime started: %s duration=%s", matchID, durationForAudioSamples(len(samples)).Round(time.Millisecond))
 	}
-	playback.PlayPCM(ctx, samples)
+	chime := append([]int16(nil), samples...)
+	applyGainInPlace(chime, chimeGainDB)
+	playback.PlayPCM(ctx, chime)
+}
+
+func (c *WebRTCController) playEndChime(ctx context.Context, matchID string) {
+	if c.Options.DisablePlayback {
+		return
+	}
+	samples, err := endChimeSamplesPCM()
+	if err != nil {
+		log.Printf("end chime unavailable: %s: %v", matchID, err)
+		return
+	}
+	chimeCtx, cancel := context.WithTimeout(ctx, durationForAudioSamples(len(samples))+500*time.Millisecond)
+	defer cancel()
+	playback, err := audio.StartPlayback(chimeCtx, audio.PlaybackOptions{
+		OutputDeviceID:    c.Options.OutputDeviceID,
+		FallbackToDefault: true,
+		Verbose:           c.Options.Verbose,
+		BufferFrames:      100,
+	})
+	if err != nil {
+		log.Printf("end chime playback unavailable: %s: %v", matchID, err)
+		return
+	}
+	defer playback.Stop()
+	if c.Options.Verbose {
+		log.Printf("end chime started: %s duration=%s", matchID, durationForAudioSamples(len(samples)).Round(time.Millisecond))
+	}
+	chime := append([]int16(nil), samples...)
+	applyGainInPlace(chime, chimeGainDB)
+	playback.PlayPCM(chimeCtx, chime)
 }
 
 func durationForAudioSamples(samples int) time.Duration {
