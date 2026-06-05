@@ -76,6 +76,7 @@ type command struct {
 	playChimes     bool
 	inputDeviceID  string
 	outputDeviceID string
+	outputGainDB   float64
 	replayDir      string
 	endCallHotkey  string
 }
@@ -94,6 +95,7 @@ const (
 	commandSetPlayChimes
 	commandSetInputDevice
 	commandSetOutputDevice
+	commandSetOutputGain
 	commandSetReplayDir
 	commandSetEndCallHotkey
 	commandEndCall
@@ -190,6 +192,10 @@ func (c *Controller) Run(ctx context.Context) error {
 				c.setOutputDeviceID(cmd.outputDeviceID)
 				voiceController.Options.OutputDeviceID = cmd.outputDeviceID
 				c.publish(c.statusForCurrent(active, waiting, "Output device applies to the next voice session."))
+			case commandSetOutputGain:
+				c.setOutputGainDB(cmd.outputGainDB)
+				voiceController.Options.OutputGainDB = cmd.outputGainDB
+				c.publish(c.statusForCurrent(active, waiting, ""))
 			case commandSetReplayDir:
 				if err := c.setReplayDir(cmd.replayDir); err != nil {
 					c.publish(c.status(StateError, "", "", err.Error()))
@@ -360,6 +366,10 @@ func (c *Controller) SetOutputDeviceID(id string) {
 	c.enqueue(command{kind: commandSetOutputDevice, outputDeviceID: id})
 }
 
+func (c *Controller) SetOutputGainDB(gainDB float64) {
+	c.enqueue(command{kind: commandSetOutputGain, outputGainDB: gainDB})
+}
+
 func (c *Controller) SetReplayDir(path string) {
 	c.enqueue(command{kind: commandSetReplayDir, replayDir: path})
 }
@@ -425,6 +435,14 @@ func (c *Controller) setInputDeviceID(id string) {
 func (c *Controller) setOutputDeviceID(id string) {
 	c.mu.Lock()
 	c.cfg.OutputDeviceID = id
+	cfg := c.cfg
+	c.mu.Unlock()
+	c.saveConfig(cfg)
+}
+
+func (c *Controller) setOutputGainDB(gainDB float64) {
+	c.mu.Lock()
+	c.cfg.OutputGainDB = gainDB
 	cfg := c.cfg
 	c.mu.Unlock()
 	c.saveConfig(cfg)

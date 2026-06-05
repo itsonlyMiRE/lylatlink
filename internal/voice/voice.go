@@ -77,9 +77,9 @@ type signalEnvelope struct {
 }
 
 const (
-	audioCodecOpus = "opus"
-	audioCodecPCMU = "pcmu"
-	chimeGainDB    = -4.0
+	audioCodecOpus         = "opus"
+	audioCodecPCMU         = "pcmu"
+	chimeRelativeGainDB    = -4.0
 )
 
 var startChimeSamplesOnce sync.Once
@@ -698,7 +698,7 @@ func (c *WebRTCController) drainRemoteTrack(ctx context.Context, matchID string,
 			defer playback.Stop()
 			c.markAudioPlayed(matchID)
 			if c.Options.PlayChimes {
-				playConnectionChime(ctx, matchID, playback, c.Options.Verbose)
+				playConnectionChime(ctx, matchID, playback, c.Options.OutputGainDB, c.Options.Verbose)
 			}
 			if c.Options.Verbose {
 				log.Printf(
@@ -764,7 +764,7 @@ func (c *WebRTCController) markAudioPlayed(matchID string) {
 	}
 }
 
-func playConnectionChime(ctx context.Context, matchID string, playback *audio.Playback, verbose bool) {
+func playConnectionChime(ctx context.Context, matchID string, playback *audio.Playback, outputGainDB float64, verbose bool) {
 	samples, err := connectionChimeSamples()
 	if err != nil {
 		log.Printf("connection chime unavailable: %s: %v", matchID, err)
@@ -774,7 +774,7 @@ func playConnectionChime(ctx context.Context, matchID string, playback *audio.Pl
 		log.Printf("connection chime started: %s duration=%s", matchID, durationForAudioSamples(len(samples)).Round(time.Millisecond))
 	}
 	chime := append([]int16(nil), samples...)
-	applyGainInPlace(chime, chimeGainDB)
+	applyGainInPlace(chime, outputGainDB+chimeRelativeGainDB)
 	playback.PlayPCM(ctx, chime)
 }
 
@@ -804,7 +804,7 @@ func (c *WebRTCController) playEndChime(ctx context.Context, matchID string) {
 		log.Printf("end chime started: %s duration=%s", matchID, durationForAudioSamples(len(samples)).Round(time.Millisecond))
 	}
 	chime := append([]int16(nil), samples...)
-	applyGainInPlace(chime, chimeGainDB)
+	applyGainInPlace(chime, c.Options.OutputGainDB+chimeRelativeGainDB)
 	playback.PlayPCM(chimeCtx, chime)
 }
 

@@ -56,11 +56,11 @@ Default audio settings:
 
 ```toml
 input_gain_db = 0.0
-output_gain_db = -1.5
+output_gain_db = -1.0
 noise_gate_threshold_db = -45.0
 ```
 
-You can edit these from the tray menu with **Edit Config File**. Changes apply to the next voice session.
+You can choose output gain from the tray menu; it affects voice and connection sounds. The other values can be edited from the tray menu with **Edit Config File**.
 
 ## Notes
 

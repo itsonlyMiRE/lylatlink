@@ -87,11 +87,11 @@ func TestApplyGainInPlace(t *testing.T) {
 	}
 }
 
-func TestChimeGainIsGentleAttenuation(t *testing.T) {
+func TestChimeGainIsRelativeToOutputGain(t *testing.T) {
 	frame := []int16{10000}
-	applyGainInPlace(frame, chimeGainDB)
-	if frame[0] < 6250 || frame[0] > 6360 {
-		t.Fatalf("chime sample after gain = %d, want about 6310", frame[0])
+	applyGainInPlace(frame, -5+chimeRelativeGainDB)
+	if frame[0] < 3500 || frame[0] > 3590 {
+		t.Fatalf("chime sample after gain = %d, want about 3548", frame[0])
 	}
 }
 

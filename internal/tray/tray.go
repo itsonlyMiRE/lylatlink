@@ -21,6 +21,8 @@ import (
 
 const projectURL = "https://github.com/itsonlyMiRE/lylatlink"
 
+var outputGainChoices = []float64{-1, -5, -10, -20}
+
 type Runner struct {
 	Controller *app.Controller
 }
@@ -50,6 +52,7 @@ type menu struct {
 
 	inputItems  map[string]*systray.MenuItem
 	outputItems map[string]*systray.MenuItem
+	gainItems   map[float64]*systray.MenuItem
 	hotkeyItems map[string]*systray.MenuItem
 	last        app.Status
 }
@@ -70,6 +73,7 @@ func (r *Runner) ready(ctx context.Context) {
 		controller:  r.Controller,
 		inputItems:  map[string]*systray.MenuItem{},
 		outputItems: map[string]*systray.MenuItem{},
+		gainItems:   map[float64]*systray.MenuItem{},
 		hotkeyItems: map[string]*systray.MenuItem{},
 	}
 
@@ -98,8 +102,8 @@ func (r *Runner) ready(ctx context.Context) {
 	m.codec.Disable()
 	m.inputGain = systray.AddMenuItem("Input gain: 0.0 dB", "Configured microphone gain")
 	m.inputGain.Disable()
-	m.outputGain = systray.AddMenuItem("Output gain: -1.5 dB", "Configured remote playback gain")
-	m.outputGain.Disable()
+	m.outputGain = systray.AddMenuItem("Output gain: -1.0 dB", "Choose remote voice playback gain")
+	m.addOutputGainItems()
 	m.noiseGate = systray.AddMenuItem("Noise gate: -45.0 dBFS", "Configured microphone noise gate threshold")
 	m.noiseGate.Disable()
 	m.playback = systray.AddMenuItem("Playback: on", "Remote speaker playback state")
@@ -117,6 +121,7 @@ func (r *Runner) ready(ctx context.Context) {
 	go m.handlePlayChimes()
 	go m.handleEndCall()
 	go m.handleHotkeys()
+	go m.handleOutputGains()
 	go m.handleRefreshInputs()
 	go m.handleRefreshOutputs()
 	go m.handleReplayFolder()
@@ -269,6 +274,7 @@ func (m *menu) update(status app.Status) {
 	m.applyPlayChimes(status.PlayChimes)
 	m.applyEndCall(status)
 	m.applyEndCallHotkey(status.EndCallHotkey)
+	m.applyOutputGain(status.OutputGainDB)
 	m.applyInputChecks()
 	m.applyOutputChecks()
 }
@@ -315,6 +321,39 @@ func (m *menu) applyEndCallHotkey(key string) {
 	m.hotkeyRoot.SetTitle("End call hotkey: " + hotkey.Label(key))
 	for itemKey, item := range m.hotkeyItems {
 		if itemKey == key {
+			item.Check()
+		} else {
+			item.Uncheck()
+		}
+	}
+}
+
+func (m *menu) addOutputGainItems() {
+	for _, gain := range outputGainChoices {
+		title := fmt.Sprintf("%.0f dB", gain)
+		item := m.outputGain.AddSubMenuItemCheckbox(title, "Set remote voice playback gain to "+title, false)
+		m.gainItems[gain] = item
+	}
+}
+
+func (m *menu) handleOutputGains() {
+	for gain, item := range m.gainItems {
+		gain := gain
+		item := item
+		go func() {
+			for range item.ClickedCh {
+				m.controller.SetOutputGainDB(gain)
+				m.last.OutputGainDB = gain
+				m.applyOutputGain(gain)
+			}
+		}()
+	}
+}
+
+func (m *menu) applyOutputGain(gainDB float64) {
+	m.outputGain.SetTitle(fmt.Sprintf("Output gain: %.1f dB", gainDB))
+	for gain, item := range m.gainItems {
+		if sameGain(gain, gainDB) {
 			item.Check()
 		} else {
 			item.Uncheck()
@@ -526,6 +565,11 @@ func endCallTitle(key string) string {
 		return "End call"
 	}
 	return "End call (" + hotkey.Label(key) + ")"
+}
+
+func sameGain(a, b float64) bool {
+	const epsilon = 0.001
+	return a-b < epsilon && b-a < epsilon
 }
 
 func compactPath(path string, maxLen int) string {

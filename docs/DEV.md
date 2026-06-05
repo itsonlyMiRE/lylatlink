@@ -71,7 +71,7 @@ input_device_id = "" # optional; empty means system default microphone
 output_device_id = "" # optional; empty means system default speaker/headphones
 audio_codec = "opus" # opus or pcmu
 input_gain_db = 0.0
-output_gain_db = -1.5
+output_gain_db = -1.0
 noise_gate_threshold_db = -45.0
 end_call_hotkey = "f8" # f8, f9, f10, f11, f12, backtick, backslash, or empty/disabled
 ```

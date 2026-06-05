@@ -39,7 +39,7 @@ func Default() Config {
 		PlayChimes:    true,
 		EndCallHotkey: "f8",
 		AudioCodec:    "opus",
-		OutputGainDB:  -1.5,
+		OutputGainDB:  -1,
 		NoiseGateDB:   -45,
 		SignalBaseURL: "http://lylatlink.signal.mire.systems:8787",
 	}
