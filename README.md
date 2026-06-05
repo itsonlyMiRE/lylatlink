@@ -3,19 +3,19 @@
   LylatLink - Slippi Voice Chat
 </h1>
 
-**[DOWNLOAD](#download)** | **[SETUP](#setup)**
+**[DOWNLOAD](#download)** | **[SETUP](#basic-setup)**
 
-LylatLink is a small open-source companion app for Slippi that adds voice chat with opponents. It is designed with simplicity in mind - run the launcher app, play Slippi, and a voice call will start automatically when both players in a match are using LylatLink. **No setup required.**
+LylatLink is a small open-source companion app for Slippi that adds voice chat with opponents. It is designed with simplicity in mind - run the launcher app, play Slippi, and a voice call will start automatically when both players in a match are using LylatLink. **No setup required in most environments.**
 
 Core details:
 - **Tiny <15MB executable size** - built fully in Go; no large resource-hungry Electron app
 - **Negligible resource consumption** - <50MB memory
 - **Fully open source**
 - **ZERO setup required** in most cases - use the launch-together app and play normally
-- **Simple UI** - little menu in your system tray + an info and status overlay in-game [overlay WIP] 
+- **Simple UI** - little menu in your system tray [an info and status overlay in-game is WIP] 
 - **No login** - just parses new .slp files and matches players accordingly
-- **End Call** menu button and configurable hotkey; quickly terminate calls with toxic players
-- **Player IP protection** - audio is P2P but routed through a relay server
+- **End call** menu button and configurable hotkey; quickly terminate calls with toxic players
+- **Player IP protection** - voice traffic is routed through a relay server
 - Absolutely **zero server-side capture or analysis of audio**, nothing is stored, the server is purely a relay to protect player IPs
 - Cost is out of my pocket but cheap :,)
 - Matches with >2 players not currently supported, but can be if there is demand (or someone can raise a PR)
@@ -28,17 +28,21 @@ Core details:
 
 **See setup below before running.**
 
-## Setup
+## Basic Setup
 
 1. Download the latest release for your platform above.
 2. Run the launch-together app. Make a shortcut to this file if you want; **this can basically replace your normal Slippi Dolphin shortcut!** More info below.
     - Windows: Unzip, run **`Slippi Dolphin with LylatLink.exe`**. The zip also includes `lylatlink.exe` if you only want the standalone tray app.
     - Mac: Unzip, move the apps into your `Applications` folder, then run **`Slippi Dolphin with LylatLink.app`**. The zip also includes `LylatLink.app` if you only want the standalone tray app.
 
-      NOTE: I have no interest in paying $99/yr to Apple so you will probably get a security warning when running for the first time. [Click here for the steps to remediate this and trust the app.](docs/apple-security-fix.md), you may have to do this first for the LylatLink app, then the launcher app.
+      NOTE: I have no interest in paying $99/yr to Apple so you will probably get a security warning when running for the first time. [Click here for the steps to remediate this and trust the app.](docs/apple-security-fix.md). You may have to do this first for the LylatLink app, then the launcher app.
 3. Play! By default, a chime will play when a call starts with your opponent.
 
+## Additional Setup Notes
+
 **The launch-together app starts LylatLink and your existing Slippi Dolphin app together, and closes LylatLink when you close Dolphin.** If your opponent also has LylatLink, voice connects automatically. If not, nothing changes; LylatLink waits quietly and closes when Dolphin closes. On first connection, your OS/firewall may ask to allow network access. Allow it.
+
+The tray menu lets you change the end-call hotkey and output gain, as well as toggle the connect/disconnect sounds. Output gain affects LylatLink voice and connection sounds.
 
 To use LylatLink, Slippi must be configured to save .slp replays. LylatLink will try to find your Slippi Dolphin install and replay folder automatically using your Slippi Launcher and Dolphin settings. If it does not, open the tray menu, choose **Replay Folder**, and select the folder that stores your .slp replays. ***Note:** If you organize replays into monthly subfolders, choose the parent folder; i.e., if they save to [path]/Slippi/2026-06, select the 'Slippi' folder.*
 
