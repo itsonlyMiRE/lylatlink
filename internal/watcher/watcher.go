@@ -47,7 +47,7 @@ func New(replayDir string) *Watcher {
 	return &Watcher{
 		ReplayDir:       replayDir,
 		Debounce:        time.Second,
-		StableThreshold: 2 * time.Second,
+		StableThreshold: 10 * time.Minute,
 		StartupScanAge:  30 * time.Second,
 	}
 }
@@ -189,6 +189,9 @@ func (w *Watcher) detectStableEnd(ctx context.Context, path string, state *fileS
 		return
 	}
 
+	// Normal game-end events close calls immediately. This fallback only catches
+	// abnormal exits where Slippi stops writing without recording Game End; keep
+	// it conservative so in-game pauses do not look like ended matches.
 	info, err := os.Stat(path)
 	if err != nil {
 		return
